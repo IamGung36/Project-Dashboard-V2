@@ -254,11 +254,24 @@ const DEFAULT_DB = {
   ]
 };
 
+// Stable JSON stringifier helper to avoid order mismatch false-positives
+function stableStringify(obj) {
+  if (obj === null || typeof obj !== 'object') {
+    return JSON.stringify(obj);
+  }
+  if (Array.isArray(obj)) {
+    return '[' + obj.map(stableStringify).join(',') + ']';
+  }
+  const keys = Object.keys(obj).sort();
+  return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify(obj[k])).join(',') + '}';
+}
+
 // Database controller class
 class LocalDatabase {
   constructor() {
     this.data = null;
     this.lastSaveTime = 0;
+    this.isSaving = false;
     this.init();
     this.startRealtimeSync();
   }
@@ -277,7 +290,11 @@ class LocalDatabase {
 
   startRealtimeSync() {
     setInterval(() => {
-      // Cooldown period: skip sync if we saved recently to prevent overwriting local changes
+      // Cooldown period or saving in progress: skip sync
+      if (this.isSaving) {
+        console.log('Skipping real-time sync: save in progress');
+        return;
+      }
       if (this.lastSaveTime && (Date.now() - this.lastSaveTime < 15000)) {
         console.log('Skipping real-time sync: within cooldown period after save');
         return;
@@ -293,8 +310,8 @@ class LocalDatabase {
           })
           .then(serverDb => {
             if (serverDb && (serverDb.projects || serverDb.awardedProjects)) {
-              const currentStr = JSON.stringify(this.data);
-              const serverStr = JSON.stringify(serverDb);
+              const currentStr = stableStringify(this.data);
+              const serverStr = stableStringify(serverDb);
               if (currentStr !== serverStr) {
                 console.log('Database updated from server, refreshing views...');
                 this.data = serverDb;
@@ -451,19 +468,19 @@ class LocalDatabase {
     }
   }
 
-  fetchFromServer(gasUrl) {
+  fetchFromServer(gasUrl, force = false) {
     const url = gasUrl.indexOf('?') !== -1 ? `${gasUrl}&action=get` : `${gasUrl}?action=get`;
-    fetch(url)
+    return fetch(url)
       .then(res => {
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         return res.json();
       })
       .then(serverDb => {
         if (serverDb && (serverDb.projects || serverDb.awardedProjects)) {
-          const currentStr = JSON.stringify(this.data);
-          const serverStr = JSON.stringify(serverDb);
-          if (currentStr !== serverStr) {
-            console.log('Database synced from server on init, updating UI...');
+          const currentStr = stableStringify(this.data);
+          const serverStr = stableStringify(serverDb);
+          if (force || currentStr !== serverStr) {
+            console.log('Database synced from server, updating UI...');
             this.data = serverDb;
             this.patchAndMigrate();
             localStorage.setItem(DB_KEY, JSON.stringify(this.data));
@@ -471,21 +488,27 @@ class LocalDatabase {
               window.app.updateViews();
             }
           }
+          return serverDb;
         }
+        throw new Error('Invalid database object returned from server');
       })
       .catch(e => {
-        console.error('Failed to fetch database from GAS API on init:', e);
+        console.error('Failed to fetch database from GAS API:', e);
+        throw e;
       });
   }
 
   // Save current state to LocalStorage and remote GAS API if configured
   save() {
     try {
-      this.lastSaveTime = Date.now();
       localStorage.setItem(DB_KEY, JSON.stringify(this.data));
 
       const gasUrl = this.getGasUrl();
       if (gasUrl) {
+        this.isSaving = true;
+        if (window.app && typeof window.app.updateSyncWidgets === 'function') {
+          window.app.updateSyncWidgets();
+        }
         const url = gasUrl.indexOf('?') !== -1 ? `${gasUrl}&action=save` : `${gasUrl}?action=save`;
         fetch(url, {
           method: 'POST',
@@ -493,10 +516,25 @@ class LocalDatabase {
         })
         .then(() => {
           console.log('Database background sync: save request sent to server.');
+          this.isSaving = false;
+          this.lastSaveTime = Date.now();
+          if (window.app && typeof window.app.updateSyncWidgets === 'function') {
+            window.app.updateSyncWidgets();
+          }
         })
         .catch(e => {
           console.error('Failed to sync save to GAS API:', e);
+          this.isSaving = false;
+          this.lastSaveTime = Date.now();
+          if (window.app && typeof window.app.updateSyncWidgets === 'function') {
+            window.app.updateSyncWidgets();
+          }
         });
+      } else {
+        this.lastSaveTime = Date.now();
+        if (window.app && typeof window.app.updateSyncWidgets === 'function') {
+          window.app.updateSyncWidgets();
+        }
       }
     } catch (e) {
       console.error('Failed to save database', e);

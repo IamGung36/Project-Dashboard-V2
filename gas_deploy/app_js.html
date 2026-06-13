@@ -579,6 +579,37 @@ class DashboardApp {
       editProjMapsLink.addEventListener('input', () => autoSelectRegion('edit-project-coords', 'edit-project-maps-link', 'edit-project-region'));
     }
 
+    // Setup Google Sheet Sync Event Handlers
+    const sidebarSyncBtn = document.getElementById('sidebar-sync-btn');
+    const mobileSyncBtn = document.getElementById('mobile-sync-btn');
+    const settingsSyncBtn = document.getElementById('settings-sync-btn');
+    const settingsDisconnectBtn = document.getElementById('settings-disconnect-btn');
+
+    const triggerSync = () => this.syncFromGoogleSheets();
+
+    if (sidebarSyncBtn) sidebarSyncBtn.addEventListener('click', triggerSync);
+    if (mobileSyncBtn) mobileSyncBtn.addEventListener('click', triggerSync);
+    if (settingsSyncBtn) settingsSyncBtn.addEventListener('click', triggerSync);
+
+    if (settingsDisconnectBtn) {
+      settingsDisconnectBtn.addEventListener('click', () => {
+        if (confirm('คุณต้องการตัดการเชื่อมต่อกับ Google Sheet หรือไม่? (ระบบจะเปลี่ยนไปรันโหมด Local Storage แทน)')) {
+          window.db.setGasUrl('');
+          const gasStatusDiv = document.getElementById('gas-connection-status');
+          if (gasStatusDiv) {
+            gasStatusDiv.className = 'mt-3 fs-7 text-success';
+            gasStatusDiv.innerHTML = '<i class="fas fa-check-circle me-2"></i>Database connection removed. Running in Local Storage mode.';
+            gasStatusDiv.style.display = 'block';
+          }
+          const apiUrlInput = document.getElementById('gas-api-url');
+          if (apiUrlInput) apiUrlInput.value = '';
+          
+          window.db.init();
+          this.updateViews();
+        }
+      });
+    }
+
     // Initial renders
     this.updateViews();
   }
@@ -722,6 +753,158 @@ class DashboardApp {
     this.renderSettingsHolidays();
     this.renderSettingsGasUrl();
     this.updateMapMarkers();
+    this.updateSyncWidgets();
+  }
+
+  updateSyncWidgets() {
+    const gasUrl = window.db.getGasUrl();
+    const isSaving = window.db.isSaving;
+    const lastSaveTime = window.db.lastSaveTime;
+
+    const sidebarDbStatus = document.getElementById('sidebar-db-status');
+    const sidebarSyncTime = document.getElementById('sidebar-sync-time');
+    const sidebarSyncBtn = document.getElementById('sidebar-sync-btn');
+
+    const mobileDbStatus = document.getElementById('mobile-db-status');
+    const mobileSyncBtn = document.getElementById('mobile-sync-btn');
+
+    const settingsSyncPanel = document.getElementById('settings-sync-panel');
+    const settingsSyncTime = document.getElementById('settings-sync-time');
+
+    let syncTimeText = 'Not synced';
+    if (lastSaveTime) {
+      const date = new Date(lastSaveTime);
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      syncTimeText = `Synced at ${hours}:${minutes}:${seconds}`;
+    }
+
+    if (gasUrl) {
+      // Show Google Sheets Connection indicators
+      if (sidebarDbStatus) {
+        sidebarDbStatus.className = 'badge bg-success px-2 py-1';
+        sidebarDbStatus.innerHTML = '<i class="fas fa-link me-1"></i>Connected';
+        sidebarDbStatus.style.backgroundColor = 'var(--primary-color)';
+      }
+      if (sidebarSyncTime) {
+        sidebarSyncTime.innerText = isSaving ? 'Saving to sheet...' : syncTimeText;
+      }
+      if (sidebarSyncBtn) {
+        sidebarSyncBtn.style.display = 'block';
+        const icon = sidebarSyncBtn.querySelector('i');
+        if (icon) {
+          if (isSaving) icon.classList.add('fa-spin');
+          else icon.classList.remove('fa-spin');
+        }
+      }
+
+      if (mobileDbStatus) {
+        mobileDbStatus.className = 'badge bg-success me-2';
+        mobileDbStatus.innerHTML = 'Connected';
+      }
+      if (mobileSyncBtn) {
+        mobileSyncBtn.style.display = 'block';
+        const icon = mobileSyncBtn.querySelector('i');
+        if (icon) {
+          if (isSaving) icon.classList.add('fa-spin');
+          else icon.classList.remove('fa-spin');
+        }
+      }
+
+      if (settingsSyncPanel) {
+        settingsSyncPanel.style.setProperty('display', 'flex', 'important');
+      }
+      if (settingsSyncTime) {
+        settingsSyncTime.innerText = isSaving ? 'Saving changes to Google Sheets in real-time...' : syncTimeText;
+      }
+    } else {
+      // Local Storage Mode
+      if (sidebarDbStatus) {
+        sidebarDbStatus.className = 'badge bg-secondary px-2 py-1';
+        sidebarDbStatus.innerText = 'Local';
+      }
+      if (sidebarSyncTime) {
+        sidebarSyncTime.innerText = 'Offline Mode';
+      }
+      if (sidebarSyncBtn) {
+        sidebarSyncBtn.style.display = 'none';
+      }
+
+      if (mobileDbStatus) {
+        mobileDbStatus.className = 'badge bg-secondary me-2';
+        mobileDbStatus.innerText = 'Local';
+      }
+      if (mobileSyncBtn) {
+        mobileSyncBtn.style.display = 'none';
+      }
+
+      if (settingsSyncPanel) {
+        settingsSyncPanel.style.setProperty('display', 'none', 'important');
+      }
+    }
+  }
+
+  syncFromGoogleSheets() {
+    const gasUrl = window.db.getGasUrl();
+    if (!gasUrl) {
+      alert('ไม่ได้เชื่อมต่อกับ Google Sheet กรุณาใส่ Web App URL ในหน้าตั้งค่าก่อน');
+      return;
+    }
+
+    // Add spinner to all sync buttons
+    const btns = [
+      document.getElementById('sidebar-sync-btn'),
+      document.getElementById('mobile-sync-btn'),
+      document.getElementById('settings-sync-btn')
+    ];
+
+    btns.forEach(btn => {
+      if (btn) {
+        const icon = btn.querySelector('i');
+        if (icon) icon.classList.add('fa-spin');
+        btn.disabled = true;
+      }
+    });
+
+    console.log('Force-syncing database from Google Sheets...');
+    
+    return window.db.fetchFromServer(gasUrl, true)
+      .then(serverDb => {
+        console.log('Force-sync complete: views updated');
+        // Flash success feedback
+        btns.forEach(btn => {
+          if (btn) {
+            btn.classList.add('text-success');
+            setTimeout(() => {
+              btn.classList.remove('text-success');
+            }, 2000);
+          }
+        });
+        
+        // Show success connection status on settings page if visible
+        const gasStatusDiv = document.getElementById('gas-connection-status');
+        if (gasStatusDiv && window.db.getGasUrl()) {
+          gasStatusDiv.className = 'mt-3 fs-7 text-success';
+          gasStatusDiv.innerHTML = '<i class="fas fa-check-circle me-2"></i>ดึงข้อมูลล่าสุดจาก Google Sheets เรียบร้อยแล้ว!';
+          gasStatusDiv.style.display = 'block';
+        }
+      })
+      .catch(err => {
+        console.error('Manual force sync failed:', err);
+        alert(`เกิดข้อผิดพลาดในการดึงข้อมูลจาก Google Sheets: ${err.message}`);
+      })
+      .finally(() => {
+        btns.forEach(btn => {
+          if (btn) {
+            const icon = btn.querySelector('i');
+            if (icon) icon.classList.remove('fa-spin');
+            btn.disabled = false;
+          }
+        });
+        window.db.lastSaveTime = Date.now(); // update timestamp
+        this.updateSyncWidgets();
+      });
   }
 
   initMaps() {
