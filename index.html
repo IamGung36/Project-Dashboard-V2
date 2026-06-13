@@ -383,6 +383,7 @@
                     <th class="text-center">Due Date</th>
                     <th class="text-center">Status</th>
                     <th class="text-center">Stage</th>
+                    <th class="text-center">Deliverables Checklist</th>
                     <th class="text-center">Action</th>
                   </tr>
                 </thead>
@@ -495,6 +496,7 @@
                     <th class="text-center">Due Date</th>
                     <th class="text-center">Status</th>
                     <th class="text-center">Stage</th>
+                    <th class="text-center">Deliverables Checklist</th>
                     <th class="text-center">Action</th>
                   </tr>
                 </thead>
@@ -534,15 +536,7 @@
                   <div class="row g-3 mb-4">
                     <div class="col-md-3">
                       <label for="project-region" class="form-label fw-bold">Region</label>
-                      <select class="form-select border-success-subtle" id="project-region">
-                        <option value="" selected>-- Select Region --</option>
-                        <option value="Central">Central</option>
-                        <option value="North">North</option>
-                        <option value="South">South</option>
-                        <option value="Northeast">Northeast</option>
-                        <option value="East">East</option>
-                        <option value="West">West</option>
-                      </select>
+                      <input type="text" class="form-control border-success-subtle bg-light" id="project-region" readonly placeholder="Auto from Coordinates">
                     </div>
                     <div class="col-md-3">
                       <label for="project-engineer" class="form-label fw-bold">BD Engineer</label>
@@ -1067,15 +1061,7 @@
             <div class="row g-3 mb-3">
               <div class="col-md-3">
                 <label for="edit-project-region" class="form-label fw-bold">Region</label>
-                <select class="form-select border-success-subtle" id="edit-project-region">
-                  <option value="">-- Select Region --</option>
-                  <option value="Central">Central</option>
-                  <option value="North">North</option>
-                  <option value="South">South</option>
-                  <option value="Northeast">Northeast</option>
-                  <option value="East">East</option>
-                  <option value="West">West</option>
-                </select>
+                <input type="text" class="form-control border-success-subtle bg-light" id="edit-project-region" readonly placeholder="Auto from Coordinates">
               </div>
               <div class="col-md-3">
                 <label for="edit-project-engineer" class="form-label fw-bold">BD Engineer</label>
@@ -1374,6 +1360,36 @@
             <button type="submit" class="btn text-white px-4 py-2" style="background-color: #10b981; border-radius: 8px; font-weight: 600; font-family: 'Outfit';">Save & Close</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- ================= MODAL: KANBAN CARD STATUS TOGGLE ================= -->
+  <div class="modal fade" id="kanbanCardStatusModal" tabindex="-1" aria-labelledby="kanbanCardStatusModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+      <div class="modal-content glass-card border-success-subtle text-color" style="background: var(--card-bg); backdrop-filter: blur(15px); border-radius: 12px;">
+        <div class="modal-header border-bottom border-success-subtle py-3">
+          <h5 class="modal-title fw-bold text-success" id="kanbanCardStatusModalLabel">
+            <i class="fas fa-tasks me-2"></i>อัปเดตสถานะงาน
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4 text-center">
+          <h6 class="fw-bold mb-3 text-success" id="kanban-status-project-name">Project Name</h6>
+          <p class="text-muted fs-7 mb-4">กรุณาเลือกสถานะความสำเร็จของโครงการนี้</p>
+          
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-success py-2 fw-bold" id="kanban-status-btn-complete">
+              <i class="fas fa-check-circle me-2"></i>เสร็จแล้ว (Completed - สีเขียว)
+            </button>
+            <button type="button" class="btn btn-danger py-2 fw-bold" id="kanban-status-btn-incomplete">
+              <i class="fas fa-times-circle me-2"></i>ยังไม่เสร็จ (Incomplete - สีแดง)
+            </button>
+            <button type="button" class="btn btn-outline-primary py-2 fw-semibold mt-2" id="kanban-status-btn-edit">
+              <i class="fas fa-edit me-2"></i>แก้ไขรายละเอียดโครงการ
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

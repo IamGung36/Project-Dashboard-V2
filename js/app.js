@@ -685,12 +685,12 @@ class DashboardApp {
       
       // Render default deliverables checklist
       const defaultDels = [
-        { name: 'Survey Reports', hours: 4, checked: false },
-        { name: 'PV Layout', hours: 4, checked: false },
-        { name: 'Single Line Diagram', hours: 4, checked: false },
-        { name: 'PVSyst Simulation', hours: 4, checked: false },
-        { name: 'Bill of Quantities (BOQ)', hours: 4, checked: false },
-        { name: 'Load Profile Analysis', hours: 4, checked: false }
+        { name: 'Survey Reports', hours: 4, checked: true },
+        { name: 'PV Layout', hours: 4, checked: true },
+        { name: 'Single Line Diagram', hours: 4, checked: true },
+        { name: 'PVSyst Simulation', hours: 4, checked: true },
+        { name: 'Bill of Quantities (BOQ)', hours: 4, checked: true },
+        { name: 'Load Profile Analysis', hours: 4, checked: true }
       ];
       this.renderDeliverables('add-project-deliverables-list', defaultDels);
       
@@ -1699,7 +1699,7 @@ class DashboardApp {
     tbody.innerHTML = '';
 
     if (projects.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="14" class="text-center py-4 text-muted">No projects found matching the filter options.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="15" class="text-center py-4 text-muted">No projects found matching the filter options.</td></tr>`;
       return;
     }
 
@@ -1739,6 +1739,11 @@ class DashboardApp {
       const capacityText = window.formatProjectCapacityRow(p);
       const mapsUrl = (p.lat !== null && p.lng !== null && !isNaN(p.lat) && !isNaN(p.lng)) ? 'https://www.google.com/maps?q=' + p.lat + ',' + p.lng : '';
 
+      const deliverablesList = Array.isArray(p.deliverables) ? p.deliverables : [];
+      const totalDel = deliverablesList.length;
+      const checkedDel = deliverablesList.filter(d => d.checked).length;
+      const progressPercent = totalDel > 0 ? Math.round((checkedDel / totalDel) * 100) : 0;
+
       row.innerHTML = `
         <td class="fw-bold">${p.code}</td>
         <td>
@@ -1767,6 +1772,14 @@ class DashboardApp {
         <td class="text-center">${this.formatDate(p.deadline)}</td>
         <td class="text-center">${statusBadge}</td>
         <td class="text-center">${stageBadge}</td>
+        <td class="text-center">
+          <div class="d-flex flex-column align-items-center">
+            <span class="fw-bold text-success" style="font-size: 11px;">${checkedDel}/${totalDel}</span>
+            <div class="progress w-100" style="height: 4px; max-width: 80px; background-color: var(--card-border); border-radius: 2px;">
+              <div class="progress-bar bg-success" role="progressbar" style="width: ${progressPercent}%; border-radius: 2px;"></div>
+            </div>
+          </div>
+        </td>
         <td class="text-center">
           <button class="btn btn-sm btn-outline-danger border-0 p-1 delete-project-btn" onclick="window.app.handleDeleteProject('${p.id}')" title="Delete Project">
             <i class="fas fa-trash-alt"></i>
@@ -1911,7 +1924,7 @@ class DashboardApp {
     tbody.innerHTML = '';
 
     if (projects.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="14" class="text-center py-4 text-muted">No projects found matching the filter options.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="15" class="text-center py-4 text-muted">No projects found matching the filter options.</td></tr>`;
       return;
     }
 
@@ -1951,6 +1964,11 @@ class DashboardApp {
       const capacityText = window.formatProjectCapacityRow(p);
       const mapsUrl = (p.lat !== null && p.lng !== null && !isNaN(p.lat) && !isNaN(p.lng)) ? 'https://www.google.com/maps?q=' + p.lat + ',' + p.lng : '';
 
+      const deliverablesList = Array.isArray(p.deliverables) ? p.deliverables : [];
+      const totalDel = deliverablesList.length;
+      const checkedDel = deliverablesList.filter(d => d.checked).length;
+      const progressPercent = totalDel > 0 ? Math.round((checkedDel / totalDel) * 100) : 0;
+
       row.innerHTML = `
         <td class="fw-bold">${p.code}</td>
         <td>
@@ -1979,6 +1997,14 @@ class DashboardApp {
         <td class="text-center">${this.formatDate(p.deadline)}</td>
         <td class="text-center">${statusBadge}</td>
         <td class="text-center">${stageBadge}</td>
+        <td class="text-center">
+          <div class="d-flex flex-column align-items-center">
+            <span class="fw-bold text-success" style="font-size: 11px;">${checkedDel}/${totalDel}</span>
+            <div class="progress w-100" style="height: 4px; max-width: 80px; background-color: var(--card-border); border-radius: 2px;">
+              <div class="progress-bar bg-success" role="progressbar" style="width: ${progressPercent}%; border-radius: 2px;"></div>
+            </div>
+          </div>
+        </td>
         <td class="text-center">
           <button class="btn btn-sm btn-outline-danger border-0 p-1 delete-project-btn" onclick="window.app.handleDeleteProject('${p.id}')" title="Delete Project">
             <i class="fas fa-trash-alt"></i>

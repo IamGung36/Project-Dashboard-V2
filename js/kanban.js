@@ -50,7 +50,8 @@ class KanbanBoard {
         const engineerName = eng ? eng.name : 'Unassigned';
         
         const card = document.createElement('div');
-        card.className = 'kanban-card';
+        const isCompleted = proj.isCompleted === true;
+        card.className = 'kanban-card ' + (isCompleted ? 'status-completed' : 'status-incomplete');
         card.setAttribute('draggable', 'true');
         card.setAttribute('data-id', proj.id);
 
@@ -233,11 +234,10 @@ class KanbanBoard {
             return;
           }
 
-          // Open default edit project modal
+          // Open the card status modal
           if (e.target.closest('.kanban-card')) {
-            if (window.app && typeof window.app.openEditProjectModal === 'function') {
-              window.app.openEditProjectModal(proj.id);
-            }
+            e.stopPropagation();
+            this.openCardStatusModal(proj.id);
           }
         });
 
@@ -250,6 +250,59 @@ class KanbanBoard {
       listEl.addEventListener('dragleave', (e) => this.handleDragLeave(e, colEl));
       listEl.addEventListener('drop', (e) => this.handleDrop(e, col));
     });
+  }
+
+  openCardStatusModal(projId) {
+    const proj = window.db.getProject(projId);
+    if (!proj) return;
+
+    document.getElementById('kanban-status-project-name').innerText = proj.name;
+
+    const modalEl = document.getElementById('kanbanCardStatusModal');
+    const modal = new bootstrap.Modal(modalEl);
+
+    // Get buttons
+    const btnComplete = document.getElementById('kanban-status-btn-complete');
+    const btnIncomplete = document.getElementById('kanban-status-btn-incomplete');
+    const btnEdit = document.getElementById('kanban-status-btn-edit');
+
+    // Clone buttons to clear old event listeners
+    const newBtnComplete = btnComplete.cloneNode(true);
+    const newBtnIncomplete = btnIncomplete.cloneNode(true);
+    const newBtnEdit = btnEdit.cloneNode(true);
+
+    btnComplete.parentNode.replaceChild(newBtnComplete, btnComplete);
+    btnIncomplete.parentNode.replaceChild(newBtnIncomplete, btnIncomplete);
+    btnEdit.parentNode.replaceChild(newBtnEdit, btnEdit);
+
+    newBtnComplete.addEventListener('click', () => {
+      window.db.updateProject(projId, { isCompleted: true });
+      modal.hide();
+      this.render();
+      if (window.app && typeof window.app.updateViews === 'function') {
+        window.app.updateViews();
+      }
+    });
+
+    newBtnIncomplete.addEventListener('click', () => {
+      window.db.updateProject(projId, { isCompleted: false });
+      modal.hide();
+      this.render();
+      if (window.app && typeof window.app.updateViews === 'function') {
+        window.app.updateViews();
+      }
+    });
+
+    newBtnEdit.addEventListener('click', () => {
+      modal.hide();
+      setTimeout(() => {
+        if (window.app && typeof window.app.openEditProjectModal === 'function') {
+          window.app.openEditProjectModal(projId);
+        }
+      }, 350);
+    });
+
+    modal.show();
   }
 
   handleDragStart(e, card) {

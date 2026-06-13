@@ -3,12 +3,12 @@
 const DB_KEY = 'PROJECT_DASHBOARD_DB_V3'; // New key for version 3 data structure
 
 const DEFAULT_DELIVERABLES = [
-  { name: 'Survey Reports', hours: 4, checked: false },
-  { name: 'PV Layout', hours: 4, checked: false },
-  { name: 'Single Line Diagram', hours: 4, checked: false },
-  { name: 'PVSyst Simulation', hours: 4, checked: false },
-  { name: 'Bill of Quantities (BOQ)', hours: 4, checked: false },
-  { name: 'Load Profile Analysis', hours: 4, checked: false }
+  { name: 'Survey Reports', hours: 4, checked: true },
+  { name: 'PV Layout', hours: 4, checked: true },
+  { name: 'Single Line Diagram', hours: 4, checked: true },
+  { name: 'PVSyst Simulation', hours: 4, checked: true },
+  { name: 'Bill of Quantities (BOQ)', hours: 4, checked: true },
+  { name: 'Load Profile Analysis', hours: 4, checked: true }
 ];
 
 // Default mock data to populate if database is empty
@@ -519,6 +519,9 @@ class LocalDatabase {
           return res.json();
         })
         .then(serverDb => {
+          if (serverDb && serverDb.status === 'error') {
+            throw new Error(serverDb.message || 'Server error saving database');
+          }
           if (serverDb && (serverDb.projects || serverDb.awardedProjects)) {
             console.log('Database saved and synced back from server successfully.');
             this.data = serverDb;
@@ -538,6 +541,7 @@ class LocalDatabase {
         })
         .catch(e => {
           console.error('Failed to sync save to GAS API:', e);
+          alert('ไม่สามารถบันทึกข้อมูลไปยัง Google Sheet ได้: ' + e.message);
           this.isSaving = false;
           this.lastSaveTime = Date.now();
           if (window.app && typeof window.app.updateSyncWidgets === 'function') {

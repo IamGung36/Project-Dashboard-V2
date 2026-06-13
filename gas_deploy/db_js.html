@@ -4,12 +4,12 @@
 const DB_KEY = 'PROJECT_DASHBOARD_DB_V3'; // New key for version 3 data structure
 
 const DEFAULT_DELIVERABLES = [
-  { name: 'Survey Reports', hours: 4, checked: false },
-  { name: 'PV Layout', hours: 4, checked: false },
-  { name: 'Single Line Diagram', hours: 4, checked: false },
-  { name: 'PVSyst Simulation', hours: 4, checked: false },
-  { name: 'Bill of Quantities (BOQ)', hours: 4, checked: false },
-  { name: 'Load Profile Analysis', hours: 4, checked: false }
+  { name: 'Survey Reports', hours: 4, checked: true },
+  { name: 'PV Layout', hours: 4, checked: true },
+  { name: 'Single Line Diagram', hours: 4, checked: true },
+  { name: 'PVSyst Simulation', hours: 4, checked: true },
+  { name: 'Bill of Quantities (BOQ)', hours: 4, checked: true },
+  { name: 'Load Profile Analysis', hours: 4, checked: true }
 ];
 
 // Default mock data to populate if database is empty
@@ -523,89 +523,55 @@ class LocalDatabase {
     try {
       localStorage.setItem(DB_KEY, JSON.stringify(this.data));
 
-      if (typeof google !== 'undefined' && google.script && google.script.run) {
+      const gasUrl = this.getGasUrl();
+      if (gasUrl) {
         this.isSaving = true;
         if (window.app && typeof window.app.updateSyncWidgets === 'function') {
           window.app.updateSyncWidgets();
         }
-        google.script.run
-          .withSuccessHandler((serverDbJson) => {
-            try {
-              if (serverDbJson && serverDbJson !== 'null') {
-                const serverDb = JSON.parse(serverDbJson);
-                if (serverDb && (serverDb.projects || serverDb.awardedProjects)) {
-                  console.log('Database saved and synced back inside GAS successfully.');
-                  this.data = serverDb;
-                  this.patchAndMigrate();
-                  localStorage.setItem(DB_KEY, JSON.stringify(this.data));
-                  if (window.app && typeof window.app.updateViews === 'function') {
-                    window.app.updateViews();
-                  }
-                }
-              }
-            } catch (e) {
-              console.error('Failed to parse returned database from GAS:', e);
-            }
-            this.isSaving = false;
-            this.lastSaveTime = Date.now();
-            if (window.app && typeof window.app.updateSyncWidgets === 'function') {
-              window.app.updateSyncWidgets();
-            }
-          })
-          .withFailureHandler((err) => {
-            console.error('Failed to save database via GAS run:', err);
-            this.isSaving = false;
-            this.lastSaveTime = Date.now();
-            if (window.app && typeof window.app.updateSyncWidgets === 'function') {
-              window.app.updateSyncWidgets();
-            }
-          })
-          .saveDatabase(JSON.stringify(this.data));
-      } else {
-        const gasUrl = this.getGasUrl();
-        if (gasUrl) {
-          this.isSaving = true;
-          if (window.app && typeof window.app.updateSyncWidgets === 'function') {
-            window.app.updateSyncWidgets();
+        const url = gasUrl.indexOf('?') !== -1 ? `${gasUrl}&action=save` : `${gasUrl}?action=save`;
+        fetch(url, {
+          method: 'POST',
+          body: JSON.stringify(this.data)
+        })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+          return res.json();
+        })
+        .then(serverDb => {
+          if (serverDb && serverDb.status === 'error') {
+            throw new Error(serverDb.message || 'Server error saving database');
           }
-          const url = gasUrl.indexOf('?') !== -1 ? `${gasUrl}&action=save` : `${gasUrl}?action=save`;
-          fetch(url, {
-            method: 'POST',
-            body: JSON.stringify(this.data)
-          })
-          .then(res => {
-            if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-            return res.json();
-          })
-          .then(serverDb => {
-            if (serverDb && (serverDb.projects || serverDb.awardedProjects)) {
-              console.log('Database saved and synced back from server successfully.');
-              this.data = serverDb;
-              this.patchAndMigrate();
-              localStorage.setItem(DB_KEY, JSON.stringify(this.data));
-              if (window.app && typeof window.app.updateViews === 'function') {
-                window.app.updateViews();
-              }
+          if (serverDb && (serverDb.projects || serverDb.awardedProjects)) {
+            console.log('Database saved and synced back from server successfully.');
+            this.data = serverDb;
+            this.patchAndMigrate();
+            localStorage.setItem(DB_KEY, JSON.stringify(this.data));
+            if (window.app && typeof window.app.updateViews === 'function') {
+              window.app.updateViews();
             }
-            this.isSaving = false;
-            this.lastSaveTime = Date.now();
-            if (window.app && typeof window.app.updateSyncWidgets === 'function') {
-              window.app.updateSyncWidgets();
-            }
-          })
-          .catch(e => {
-            console.error('Failed to sync save to GAS API:', e);
-            this.isSaving = false;
-            this.lastSaveTime = Date.now();
-            if (window.app && typeof window.app.updateSyncWidgets === 'function') {
-              window.app.updateSyncWidgets();
-            }
-          });
-        } else {
+          } else {
+            console.warn('Server saved successfully but did not return valid database object.');
+          }
+          this.isSaving = false;
           this.lastSaveTime = Date.now();
           if (window.app && typeof window.app.updateSyncWidgets === 'function') {
             window.app.updateSyncWidgets();
           }
+        })
+        .catch(e => {
+          console.error('Failed to sync save to GAS API:', e);
+          alert('ไม่สามารถบันทึกข้อมูลไปยัง Google Sheet ได้: ' + e.message);
+          this.isSaving = false;
+          this.lastSaveTime = Date.now();
+          if (window.app && typeof window.app.updateSyncWidgets === 'function') {
+            window.app.updateSyncWidgets();
+          }
+        });
+      } else {
+        this.lastSaveTime = Date.now();
+        if (window.app && typeof window.app.updateSyncWidgets === 'function') {
+          window.app.updateSyncWidgets();
         }
       }
     } catch (e) {

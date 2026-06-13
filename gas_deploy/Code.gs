@@ -59,7 +59,8 @@ function getSpreadsheet() {
     try {
       return SpreadsheetApp.openById(ssId);
     } catch (e) {
-      props.deleteProperty('SPREADSHEET_ID'); // If spreadsheet was deleted, reset ID
+      Logger.log('Error opening spreadsheet: ' + e.toString());
+      throw new Error('Could not open spreadsheet. Please check if the spreadsheet exists and is accessible. Error: ' + e.toString());
     }
   }
   
@@ -269,12 +270,12 @@ function resetDatabase() {
  */
 function getDefaultMockData(key) {
   var defaultDeliverables = [
-    { name: 'Survey Reports', hours: 4, checked: false },
-    { name: 'PV Layout', hours: 4, checked: false },
-    { name: 'Single Line Diagram', hours: 4, checked: false },
-    { name: 'PVSyst Simulation', hours: 4, checked: false },
-    { name: 'Bill of Quantities (BOQ)', hours: 4, checked: false },
-    { name: 'Load Profile Analysis', hours: 4, checked: false }
+    { name: 'Survey Reports', hours: 4, checked: true },
+    { name: 'PV Layout', hours: 4, checked: true },
+    { name: 'Single Line Diagram', hours: 4, checked: true },
+    { name: 'PVSyst Simulation', hours: 4, checked: true },
+    { name: 'Bill of Quantities (BOQ)', hours: 4, checked: true },
+    { name: 'Load Profile Analysis', hours: 4, checked: true }
   ];
 
   if (key === 'members') {
