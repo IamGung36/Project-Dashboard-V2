@@ -648,7 +648,7 @@ class DashboardApp {
     this.portfolioMarkers = [];
     this.overviewMarkers = [];
 
-    const projects = window.db.getProjects();
+    const projects = [...window.db.getProjects(), ...window.db.getAwardedProjects()];
     const members = window.db.getMembers();
     const currentTheme = localStorage.getItem('THEME') || 'light';
 
@@ -849,7 +849,7 @@ class DashboardApp {
 
   // Render charts for Portfolio
   renderPortfolioCharts() {
-    const projects = window.db.getProjects().filter(p => p.stage === 'Award');
+    const projects = window.db.getAwardedProjects();
     
     // 1. Calculate Solar Systems Capacity (Excluding BESS)
     const solarTypes = ['Rooftop', 'Farm', 'Floating', 'Carpark'];
@@ -1214,7 +1214,7 @@ class DashboardApp {
     const business = document.getElementById('pipeline-filter-business').value;
     const sortVal = document.getElementById('pipeline-sort') ? document.getElementById('pipeline-sort').value : 'nearest';
 
-    let projects = window.db.getProjects().filter(p => p.stage !== 'Award');
+    let projects = window.db.getProjects();
     const members = window.db.getMembers();
 
     // Filters
@@ -1416,7 +1416,7 @@ class DashboardApp {
     const business = document.getElementById('awarded-pipeline-filter-business').value;
     const sortVal = document.getElementById('awarded-pipeline-sort') ? document.getElementById('awarded-pipeline-sort').value : 'nearest';
 
-    let projects = window.db.getProjects().filter(p => p.stage === 'Award');
+    let projects = window.db.getAwardedProjects();
     const members = window.db.getMembers();
 
     // Filters
@@ -1614,7 +1614,7 @@ class DashboardApp {
     if (!headerRow || !bodyRow) return;
 
     const members = window.db.getMembers();
-    const projects = window.db.getProjects();
+    const projects = [...window.db.getProjects(), ...window.db.getAwardedProjects()];
 
     headerRow.innerHTML = '';
     bodyRow.innerHTML = '';
@@ -2468,6 +2468,365 @@ class DashboardApp {
     });
 
     infoWindow.open(map, this[markerKey]);
+  }
+
+  getFilteredPipelineProjects() {
+    const searchStr = (document.getElementById('pipeline-search').value || '').toLowerCase();
+    const region = document.getElementById('pipeline-filter-region').value;
+    const investor = document.getElementById('pipeline-filter-investor').value;
+    const business = document.getElementById('pipeline-filter-business').value;
+    const sortVal = document.getElementById('pipeline-sort') ? document.getElementById('pipeline-sort').value : 'nearest';
+
+    let projects = window.db.getProjects();
+
+    // Filters
+    if (searchStr) {
+      projects = projects.filter(p => 
+        p.code.toLowerCase().includes(searchStr) || 
+        p.name.toLowerCase().includes(searchStr) || 
+        p.client.toLowerCase().includes(searchStr)
+      );
+    }
+    if (region) projects = projects.filter(p => p.region === region);
+    if (investor) projects = projects.filter(p => p.investor === investor);
+    if (business) projects = projects.filter(p => p.businessType === business);
+
+    // Sorting
+    if (sortVal === 'nearest') {
+      projects.sort((a, b) => {
+        const ad = a.deadline ? new Date(a.deadline) : new Date(8640000000000000);
+        const bd = b.deadline ? new Date(b.deadline) : new Date(8640000000000000);
+        return ad - bd;
+      });
+    } else if (sortVal === 'latest') {
+      projects.sort((a, b) => {
+        const ad = a.deadline ? new Date(a.deadline) : new Date(0);
+        const bd = b.deadline ? new Date(b.deadline) : new Date(0);
+        return bd - ad;
+      });
+    } else if (sortVal === 'code') {
+      projects.sort((a, b) => a.code.localeCompare(b.code));
+    }
+    return projects;
+  }
+
+  getFilteredAwardedProjects() {
+    const searchStr = (document.getElementById('awarded-pipeline-search').value || '').toLowerCase();
+    const region = document.getElementById('awarded-pipeline-filter-region').value;
+    const investor = document.getElementById('awarded-pipeline-filter-investor').value;
+    const business = document.getElementById('awarded-pipeline-filter-business').value;
+    const sortVal = document.getElementById('awarded-pipeline-sort') ? document.getElementById('awarded-pipeline-sort').value : 'nearest';
+
+    let projects = window.db.getAwardedProjects();
+
+    // Filters
+    if (searchStr) {
+      projects = projects.filter(p => 
+        p.code.toLowerCase().includes(searchStr) || 
+        p.name.toLowerCase().includes(searchStr) || 
+        p.client.toLowerCase().includes(searchStr)
+      );
+    }
+    if (region) projects = projects.filter(p => p.region === region);
+    if (investor) projects = projects.filter(p => p.investor === investor);
+    if (business) projects = projects.filter(p => p.businessType === business);
+
+    // Sorting
+    if (sortVal === 'nearest') {
+      projects.sort((a, b) => {
+        const ad = a.deadline ? new Date(a.deadline) : new Date(8640000000000000);
+        const bd = b.deadline ? new Date(b.deadline) : new Date(8640000000000000);
+        return ad - bd;
+      });
+    } else if (sortVal === 'latest') {
+      projects.sort((a, b) => {
+        const ad = a.deadline ? new Date(a.deadline) : new Date(0);
+        const bd = b.deadline ? new Date(b.deadline) : new Date(0);
+        return bd - ad;
+      });
+    } else if (sortVal === 'code') {
+      projects.sort((a, b) => a.code.localeCompare(b.code));
+    }
+    return projects;
+  }
+
+  exportPipeline(format) {
+    const projects = this.getFilteredPipelineProjects();
+    const members = window.db.getMembers();
+    
+    if (format === 'excel') {
+      const headers = ['Project Code', 'Project Name', 'Region', 'BD Engineer', 'Investor', 'Business Type', 'Client', 'Systems (Capacity)', 'Total Capacity (MW)', 'Coordinates', 'Google Maps Link', 'Due Date', 'Status', 'Stage'];
+      const rows = projects.map(p => {
+        const eng = members.find(m => m.id === p.engineer);
+        const engName = eng ? eng.name : 'Unassigned';
+        const systemsStr = p.systems ? Object.entries(p.systems).map(([name, cap]) => `${name} (${(cap * 1000).toFixed(0)} ${name === 'BESS' ? 'kWh' : 'kWp'})`).join('; ') : '';
+        const coordsStr = (p.lat !== null && p.lng !== null) ? `${p.lat}, ${p.lng}` : '';
+        return [p.code, p.name, p.region, engName, p.investor, p.businessType, p.client, systemsStr, p.capacity, coordsStr, p.googleMapsLink || '', p.deadline, p.status, p.stage];
+      });
+      this.downloadCSV('project_pipeline', headers, rows);
+    } else if (format === 'html') {
+      const headers = ['Code', 'Project Name', 'Region', 'BD Engineer', 'Investor', 'Type', 'Client', 'Capacity (MW)', 'Due Date', 'Status', 'Stage'];
+      const rows = projects.map(p => {
+        const eng = members.find(m => m.id === p.engineer);
+        const engName = eng ? eng.name : 'Unassigned';
+        return [p.code, p.name, p.region, engName, p.investor, p.businessType, p.client, p.capacity.toFixed(2), this.formatDate(p.deadline), p.status, p.stage];
+      });
+      this.downloadHTML('Project Pipeline Report', 'List of renewable energy projects in pipeline', headers, rows);
+    } else if (format === 'pdf') {
+      this.downloadPDF('Project Pipeline Report', 'List of renewable energy projects in pipeline', 'pipeline-table-body', ['Code', 'Project Name', 'Region', 'BD Engineer', 'Investor', 'Type', 'Client', 'Systems', 'Capacity', 'Maps', 'Due Date', 'Status', 'Stage']);
+    }
+  }
+
+  exportAwarded(format) {
+    const projects = this.getFilteredAwardedProjects();
+    const members = window.db.getMembers();
+    
+    if (format === 'excel') {
+      const headers = ['Project Code', 'Project Name', 'Region', 'BD Engineer', 'Investor', 'Business Type', 'Client', 'Systems (Capacity)', 'Total Capacity (MW)', 'Coordinates', 'Google Maps Link', 'Due Date', 'Status', 'Stage', 'Construction Date', 'COD Date', 'PR Test', 'PV', 'Inverter', 'Award Note'];
+      const rows = projects.map(p => {
+        const eng = members.find(m => m.id === p.engineer);
+        const engName = eng ? eng.name : 'Unassigned';
+        const systemsStr = p.systems ? Object.entries(p.systems).map(([name, cap]) => `${name} (${(cap * 1000).toFixed(0)} ${name === 'BESS' ? 'kWh' : 'kWp'})`).join('; ') : '';
+        const coordsStr = (p.lat !== null && p.lng !== null) ? `${p.lat}, ${p.lng}` : '';
+        return [p.code, p.name, p.region, engName, p.investor, p.businessType, p.client, systemsStr, p.capacity, coordsStr, p.googleMapsLink || '', p.deadline, p.status, p.stage, p.constructionDate || '', p.codDate || '', p.prTest || '', p.pv || '', p.inverter || '', p.awardNote || ''];
+      });
+      this.downloadCSV('project_awarded', headers, rows);
+    } else if (format === 'html') {
+      const headers = ['Code', 'Project Name', 'Region', 'BD Engineer', 'Investor', 'Type', 'Client', 'Capacity (MW)', 'Due Date', 'COD Date', 'PV', 'Inverter', 'Status'];
+      const rows = projects.map(p => {
+        const eng = members.find(m => m.id === p.engineer);
+        const engName = eng ? eng.name : 'Unassigned';
+        return [p.code, p.name, p.region, engName, p.investor, p.businessType, p.client, p.capacity.toFixed(2), this.formatDate(p.deadline), this.formatDate(p.codDate), p.pv || '-', p.inverter || '-', p.status];
+      });
+      this.downloadHTML('Project Awarded Report', 'List of awarded renewable energy projects', headers, rows);
+    } else if (format === 'pdf') {
+      this.downloadPDF('Project Awarded Report', 'List of awarded renewable energy projects', 'awarded-pipeline-table-body', ['Code', 'Project Name', 'Region', 'BD Engineer', 'Investor', 'Type', 'Client', 'Systems', 'Capacity', 'Maps', 'Due Date', 'Status', 'Stage']);
+    }
+  }
+
+  downloadCSV(filename, headers, rows) {
+    const escapeField = (field) => {
+      if (field === null || field === undefined) return '';
+      let str = String(field);
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        str = '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    };
+    
+    let csvContent = headers.map(escapeField).join(',') + '\r\n';
+    rows.forEach(row => {
+      csvContent += row.map(escapeField).join(',') + '\r\n';
+    });
+    
+    // Prepend UTF-8 BOM to resolve Thai characters issues in Excel
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  downloadHTML(title, subtitle, headers, rows) {
+    let tableHeadersHtml = headers.map(h => `<th>${h}</th>`).join('');
+    let tableRowsHtml = rows.map(row => {
+      return `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`;
+    }).join('');
+    
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const bgTheme = isDark ? '#0b1610' : '#f8fafc';
+    const cardBg = isDark ? '#112218' : '#ffffff';
+    const textColor = isDark ? '#e2ece6' : '#1e293b';
+    const borderCol = isDark ? '#1a3324' : '#e2e8f0';
+    const primaryCol = '#025725';
+    
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${title}</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 30px;
+      background-color: ${bgTheme};
+      color: ${textColor};
+    }
+    .report-card {
+      background: ${cardBg};
+      border: 1px solid ${borderCol};
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    }
+    h1 {
+      color: ${primaryCol};
+      margin-top: 0;
+      margin-bottom: 5px;
+      font-size: 24px;
+    }
+    p.subtitle {
+      color: #64748b;
+      margin-top: 0;
+      margin-bottom: 25px;
+      font-size: 13px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid ${borderCol};
+      font-size: 13px;
+    }
+    th {
+      background-color: ${primaryCol};
+      color: #ffffff;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+    tr:hover {
+      background-color: rgba(2, 87, 37, 0.03);
+    }
+    .footer {
+      margin-top: 30px;
+      font-size: 11px;
+      color: #94a3b8;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="report-card">
+    <h1>${title}</h1>
+    <p class="subtitle">${subtitle} l Generated on ${new Date().toLocaleString()}</p>
+    <table>
+      <thead>
+        <tr>${tableHeadersHtml}</tr>
+      </thead>
+      <tbody>
+        ${tableRowsHtml}
+      </tbody>
+    </table>
+    <div class="footer">
+      Generated automatically by Project Dashboard Dashboard Systems. l Copyright &copy; 2026.
+    </div>
+  </div>
+</body>
+</html>
+    `;
+    
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${title.toLowerCase().replace(/\s+/g, '_')}_export.html`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  downloadPDF(title, subtitle, tbodyId, headers) {
+    const element = document.createElement('div');
+    element.className = 'p-4 bg-white text-dark';
+    element.style.fontFamily = 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif';
+    
+    // Title header
+    const header = document.createElement('div');
+    header.className = 'mb-4 border-bottom pb-2';
+    header.innerHTML = `
+      <h2 style="color: #025725; font-weight: 700; margin-bottom: 4px;">${title}</h2>
+      <p style="color: #64748b; font-size: 12px; margin: 0;">${subtitle} | Date: ${new Date().toLocaleDateString()}</p>
+    `;
+    element.appendChild(header);
+    
+    // Table container
+    const table = document.createElement('table');
+    table.className = 'table table-bordered align-middle';
+    table.style.width = '100%';
+    table.style.borderCollapse = 'collapse';
+    table.style.fontSize = '9px';
+    
+    // Header
+    const thead = document.createElement('thead');
+    thead.innerHTML = \`<tr style="background-color: #025725; color: #ffffff;">\${headers.map(h => \`<th style="padding: 6px; border: 1px solid #dee2e6; text-align: left;">\${h}</th>\`).join('')}</tr>\`;
+    table.appendChild(thead);
+    
+    // Copy table rows from DOM
+    const tbody = document.createElement('tbody');
+    const originalRows = document.querySelectorAll(\`#\${tbodyId} tr\`);
+    
+    originalRows.forEach(origRow => {
+      const clonedRow = document.createElement('tr');
+      origRow.querySelectorAll('td').forEach(origTd => {
+        const clonedTd = document.createElement('td');
+        clonedTd.style.padding = '6px';
+        clonedTd.style.border = '1px solid #dee2e6';
+        
+        // Clean up contents
+        const mapBtn = origTd.querySelector('.btn-outline-success');
+        const badgeSpan = origTd.querySelectorAll('.badge');
+        const editLink = origTd.querySelector('a');
+        
+        if (mapBtn) {
+          clonedTd.textContent = mapBtn.textContent.trim() || 'Link';
+        } else if (badgeSpan && badgeSpan.length > 0) {
+          const badgeTexts = [];
+          badgeSpan.forEach(b => badgeTexts.push(b.textContent.trim()));
+          clonedTd.textContent = badgeTexts.join(', ');
+        } else if (editLink) {
+          clonedTd.textContent = editLink.textContent.trim();
+          clonedTd.style.fontWeight = 'bold';
+        } else {
+          clonedTd.textContent = origTd.textContent.trim();
+        }
+        
+        if (origTd.classList.contains('text-end')) {
+          clonedTd.style.textAlign = 'right';
+        } else if (origTd.classList.contains('text-center')) {
+          clonedTd.style.textAlign = 'center';
+        }
+        
+        clonedRow.appendChild(clonedTd);
+      });
+      tbody.appendChild(clonedRow);
+    });
+    
+    table.appendChild(tbody);
+    element.appendChild(table);
+    
+    const footer = document.createElement('div');
+    footer.className = 'text-center mt-3';
+    footer.style.fontSize = '8px';
+    footer.style.color = '#94a3b8';
+    footer.textContent = 'Generated from Project Dashboard. page 1 of 1';
+    element.appendChild(footer);
+    
+    document.body.appendChild(element);
+    
+    const opt = {
+      margin: 8,
+      filename: `\${title.toLowerCase().replace(/\\s+/g, '_')}_\${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2.2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    };
+    
+    html2pdf().set(opt).from(element).save().then(() => {
+      document.body.removeChild(element);
+    }).catch(err => {
+      console.error('PDF generation failed:', err);
+      document.body.removeChild(element);
+    });
   }
 }
 

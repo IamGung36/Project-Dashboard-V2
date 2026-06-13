@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
   <!-- Custom Style -->
   <link rel="stylesheet" href="css/style.css">
+  <!-- html2pdf.js for high-fidelity Thai character PDF exporting -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -267,9 +269,21 @@
               <h1 class="text-success mb-1">Project Pipeline</h1>
               <p class="text-muted mb-0">Consolidated database table listing all projects with geographic coordinate links</p>
             </div>
-            <button class="btn btn-success" onclick="window.app.switchPage('all-task')">
-              <i class="fas fa-plus me-1"></i> Add new project
-            </button>
+            <div class="d-flex gap-2">
+              <div class="dropdown">
+                <button class="btn btn-outline-success dropdown-toggle" type="button" id="pipelineExportDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius: 8px; font-weight: 600; font-family: 'Outfit';">
+                  <i class="fas fa-download me-1"></i> Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="pipelineExportDropdown" style="border-radius: 8px; font-family: 'Inter'; font-size: 13px;">
+                  <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); window.app.exportPipeline('excel')"><i class="far fa-file-excel me-2 text-success"></i>Excel (CSV)</a></li>
+                  <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); window.app.exportPipeline('pdf')"><i class="far fa-file-pdf me-2 text-danger"></i>PDF Document</a></li>
+                  <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); window.app.exportPipeline('html')"><i class="far fa-file-code me-2 text-primary"></i>HTML Webpage</a></li>
+                </ul>
+              </div>
+              <button class="btn btn-success" onclick="window.app.switchPage('all-task')" style="border-radius: 8px; font-weight: 600; font-family: 'Outfit';">
+                <i class="fas fa-plus me-1"></i> Add new project
+              </button>
+            </div>
           </div>
 
           <!-- Project Summary Cards Row -->
@@ -366,9 +380,21 @@
               <h1 class="text-success mb-1">Project Awarded</h1>
               <p class="text-muted mb-0">Consolidated database table listing all awarded projects with geographic coordinate links</p>
             </div>
-            <button class="btn btn-success" onclick="window.app.switchPage('all-task')">
-              <i class="fas fa-plus me-1"></i> Add new project
-            </button>
+            <div class="d-flex gap-2">
+              <div class="dropdown">
+                <button class="btn btn-outline-success dropdown-toggle" type="button" id="awardedExportDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius: 8px; font-weight: 600; font-family: 'Outfit';">
+                  <i class="fas fa-download me-1"></i> Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="awardedExportDropdown" style="border-radius: 8px; font-family: 'Inter'; font-size: 13px;">
+                  <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); window.app.exportAwarded('excel')"><i class="far fa-file-excel me-2 text-success"></i>Excel (CSV)</a></li>
+                  <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); window.app.exportAwarded('pdf')"><i class="far fa-file-pdf me-2 text-danger"></i>PDF Document</a></li>
+                  <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); window.app.exportAwarded('html')"><i class="far fa-file-code me-2 text-primary"></i>HTML Webpage</a></li>
+                </ul>
+              </div>
+              <button class="btn btn-success" onclick="window.app.switchPage('all-task')" style="border-radius: 8px; font-weight: 600; font-family: 'Outfit';">
+                <i class="fas fa-plus me-1"></i> Add new project
+              </button>
+            </div>
           </div>
 
           <!-- Project Summary Cards Row -->

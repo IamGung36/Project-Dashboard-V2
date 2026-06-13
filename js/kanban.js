@@ -11,7 +11,7 @@ class KanbanBoard {
     const container = document.getElementById('kanban-board-wrapper');
     if (!container) return;
 
-    const projects = window.db.getProjects();
+    const projects = [...window.db.getProjects(), ...window.db.getAwardedProjects()];
     const members = window.db.getMembers();
     container.innerHTML = '';
 

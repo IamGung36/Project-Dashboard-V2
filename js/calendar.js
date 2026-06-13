@@ -41,7 +41,7 @@ class ProjectCalendar {
 
     // Fetch database holidays, projects, and notes
     const holidays = window.db.getHolidays();
-    const projects = window.db.getProjects();
+    const projects = [...window.db.getProjects(), ...window.db.getAwardedProjects()];
     const notes = window.db.getCalendarNotes ? window.db.getCalendarNotes() : [];
 
     // Padding empty cells

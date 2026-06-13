@@ -67,7 +67,7 @@ class ManhoursTracker {
 
     // Fetch members and projects
     const members = window.db.getMembers();
-    const projects = window.db.getProjects();
+    const projects = [...window.db.getProjects(), ...window.db.getAwardedProjects()];
     const manhourLogs = window.db.getManhours();
     const weekDaysStr = days.map(d => d.toISOString().split('T')[0]);
     
