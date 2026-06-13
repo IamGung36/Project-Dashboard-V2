@@ -2827,12 +2827,12 @@ class DashboardApp {
     
     // Header
     const thead = document.createElement('thead');
-    thead.innerHTML = \`<tr style="background-color: #025725; color: #ffffff;">\${headers.map(h => \`<th style="padding: 6px; border: 1px solid #dee2e6; text-align: left;">\${h}</th>\`).join('')}</tr>\`;
+    thead.innerHTML = `<tr style="background-color: #025725; color: #ffffff;">${headers.map(h => `<th style="padding: 6px; border: 1px solid #dee2e6; text-align: left;">${h}</th>`).join('')}</tr>`;
     table.appendChild(thead);
     
     // Copy table rows from DOM
     const tbody = document.createElement('tbody');
-    const originalRows = document.querySelectorAll(\`#\${tbodyId} tr\`);
+    const originalRows = document.querySelectorAll(`#${tbodyId} tr`);
     
     originalRows.forEach(origRow => {
       const clonedRow = document.createElement('tr');
@@ -2884,7 +2884,7 @@ class DashboardApp {
     
     const opt = {
       margin: 8,
-      filename: `\${title.toLowerCase().replace(/\\s+/g, '_')}_\${new Date().toISOString().split('T')[0]}.pdf`,
+      filename: `${title.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2.2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
