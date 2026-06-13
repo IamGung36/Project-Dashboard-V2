@@ -169,8 +169,12 @@ class DashboardApp {
       }
     });
 
-    // Image upload listener to convert to Base64 in background
+    // Image upload listener to convert to Base64 in background and show preview
     const fileInput = document.getElementById('project-image-file');
+    const addPreviewImg = document.getElementById('project-image-preview');
+    const addPreviewWrapper = document.getElementById('project-image-preview-wrapper');
+    const urlInput = document.getElementById('project-image-url');
+
     if (fileInput) {
       fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -178,15 +182,47 @@ class DashboardApp {
           const reader = new FileReader();
           reader.onload = (event) => {
             fileInput.setAttribute('data-base64', event.target.result);
+            if (addPreviewImg && addPreviewWrapper) {
+              addPreviewImg.src = event.target.result;
+              addPreviewWrapper.style.display = 'block';
+            }
           };
           reader.readAsDataURL(file);
         } else {
           fileInput.removeAttribute('data-base64');
+          const urlVal = urlInput ? urlInput.value.trim() : '';
+          if (urlVal && addPreviewImg && addPreviewWrapper) {
+            addPreviewImg.src = urlVal;
+            addPreviewWrapper.style.display = 'block';
+          } else if (addPreviewImg && addPreviewWrapper) {
+            addPreviewImg.src = '';
+            addPreviewWrapper.style.display = 'none';
+          }
+        }
+      });
+    }
+
+    if (urlInput) {
+      urlInput.addEventListener('input', () => {
+        const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+        if (!hasFile && addPreviewImg && addPreviewWrapper) {
+          const urlVal = urlInput.value.trim();
+          if (urlVal) {
+            addPreviewImg.src = urlVal;
+            addPreviewWrapper.style.display = 'block';
+          } else {
+            addPreviewImg.src = '';
+            addPreviewWrapper.style.display = 'none';
+          }
         }
       });
     }
     
     const editFileInput = document.getElementById('edit-project-image-file');
+    const editUrlInput = document.getElementById('edit-project-image-url');
+    const editPreviewImg = document.getElementById('edit-project-image-preview');
+    const editPreviewWrapper = document.getElementById('edit-project-image-preview-wrapper');
+
     if (editFileInput) {
       editFileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -194,10 +230,52 @@ class DashboardApp {
           const reader = new FileReader();
           reader.onload = (event) => {
             editFileInput.setAttribute('data-base64', event.target.result);
+            if (editPreviewImg && editPreviewWrapper) {
+              editPreviewImg.src = event.target.result;
+              editPreviewWrapper.style.display = 'block';
+            }
           };
           reader.readAsDataURL(file);
         } else {
           editFileInput.removeAttribute('data-base64');
+          const urlVal = editUrlInput ? editUrlInput.value.trim() : '';
+          if (urlVal && editPreviewImg && editPreviewWrapper) {
+            editPreviewImg.src = urlVal;
+            editPreviewWrapper.style.display = 'block';
+          } else if (editPreviewImg && editPreviewWrapper) {
+            const projId = document.getElementById('edit-project-id').value;
+            const originalProj = projId ? window.db.getProject(projId) : null;
+            if (originalProj && originalProj.image) {
+              editPreviewImg.src = originalProj.image;
+              editPreviewWrapper.style.display = 'block';
+            } else {
+              editPreviewImg.src = '';
+              editPreviewWrapper.style.display = 'none';
+            }
+          }
+        }
+      });
+    }
+
+    if (editUrlInput) {
+      editUrlInput.addEventListener('input', () => {
+        const hasFile = editFileInput && editFileInput.files && editFileInput.files.length > 0;
+        if (!hasFile && editPreviewImg && editPreviewWrapper) {
+          const urlVal = editUrlInput.value.trim();
+          if (urlVal) {
+            editPreviewImg.src = urlVal;
+            editPreviewWrapper.style.display = 'block';
+          } else {
+            const projId = document.getElementById('edit-project-id').value;
+            const originalProj = projId ? window.db.getProject(projId) : null;
+            if (originalProj && originalProj.image) {
+              editPreviewImg.src = originalProj.image;
+              editPreviewWrapper.style.display = 'block';
+            } else {
+              editPreviewImg.src = '';
+              editPreviewWrapper.style.display = 'none';
+            }
+          }
         }
       });
     }
@@ -704,14 +782,12 @@ class DashboardApp {
       const engName = engineer ? engineer.name : 'Unassigned';
 
       let pinColor = '#025725';
-      if (p.stage === 'Award') {
+      if (p.status === 'Standby') {
+        pinColor = '#7f8c8d';
+      } else if (p.stage === 'Award') {
         pinColor = currentTheme === 'dark' ? '#2ecc71' : '#025725';
       } else {
-        if (p.status === 'Standby') {
-          pinColor = '#7f8c8d';
-        } else {
-          pinColor = currentTheme === 'dark' ? '#f59e0b' : '#d35400';
-        }
+        pinColor = currentTheme === 'dark' ? '#f59e0b' : '#d35400';
       }
 
       const markerIcon = this.getPinIconSvg(pinColor);
@@ -1385,12 +1461,17 @@ class DashboardApp {
 
     const summaryContainer = document.getElementById('pipeline-summary-cards');
     if (summaryContainer) {
-      const sumTotal = sumRooftop + sumFarm + sumFloat + sumCarpark + sumBESS;
+      const sumSolar = sumRooftop + sumFarm + sumFloat + sumCarpark;
+      let displayTotal = `${sumSolar.toLocaleString(undefined, {maximumFractionDigits: 0})} kWp`;
+      if (sumBESS > 0) {
+        displayTotal += ` + ${sumBESS.toLocaleString(undefined, {maximumFractionDigits: 0})} kWh`;
+      }
+      const valFontSize = sumBESS > 0 ? '1.15rem' : '1.35rem';
       summaryContainer.innerHTML = `
         <div class="col-md-4 col-lg-2">
           <div class="pipeline-card pipeline-card-total">
             <div class="pipeline-card-title"><i class="fas fa-list-check"></i> Total Projects</div>
-            <div class="pipeline-card-value">${sumTotal.toLocaleString(undefined, {maximumFractionDigits: 0})} kWp/kWh</div>
+            <div class="pipeline-card-value" style="font-size: ${valFontSize}; line-height: 1.2; padding-top: 2px; padding-bottom: 2px;">${displayTotal}</div>
             <div class="pipeline-card-subtext">Total: ${countTotal} ${countTotal === 1 ? 'project' : 'projects'}</div>
           </div>
         </div>
@@ -1472,8 +1553,7 @@ class DashboardApp {
       }
       if (!systemsHtml) systemsHtml = '<span class="text-muted">-</span>';
 
-      const capInkWp = p.capacity * 1000;
-      const capacityText = `${capInkWp.toLocaleString(undefined, {maximumFractionDigits: 0})} kWp`;
+      const capacityText = window.formatProjectCapacityRow(p);
       const mapsUrl = (p.lat !== null && p.lng !== null && !isNaN(p.lat) && !isNaN(p.lng)) ? 'https://www.google.com/maps?q=' + p.lat + ',' + p.lng : '';
 
       row.innerHTML = `
@@ -1593,12 +1673,17 @@ class DashboardApp {
 
     const summaryContainer = document.getElementById('awarded-pipeline-summary-cards');
     if (summaryContainer) {
-      const sumTotal = sumRooftop + sumFarm + sumFloat + sumCarpark + sumBESS;
+      const sumSolar = sumRooftop + sumFarm + sumFloat + sumCarpark;
+      let displayTotal = `${sumSolar.toLocaleString(undefined, {maximumFractionDigits: 0})} kWp`;
+      if (sumBESS > 0) {
+        displayTotal += ` + ${sumBESS.toLocaleString(undefined, {maximumFractionDigits: 0})} kWh`;
+      }
+      const valFontSize = sumBESS > 0 ? '1.15rem' : '1.35rem';
       summaryContainer.innerHTML = `
         <div class="col-md-4 col-lg-2">
           <div class="pipeline-card pipeline-card-total">
             <div class="pipeline-card-title"><i class="fas fa-list-check"></i> Total Projects</div>
-            <div class="pipeline-card-value">${sumTotal.toLocaleString(undefined, {maximumFractionDigits: 0})} kWp/kWh</div>
+            <div class="pipeline-card-value" style="font-size: ${valFontSize}; line-height: 1.2; padding-top: 2px; padding-bottom: 2px;">${displayTotal}</div>
             <div class="pipeline-card-subtext">Total: ${countTotal} ${countTotal === 1 ? 'project' : 'projects'}</div>
           </div>
         </div>
@@ -1680,8 +1765,7 @@ class DashboardApp {
       }
       if (!systemsHtml) systemsHtml = '<span class="text-muted">-</span>';
 
-      const capInkWp = p.capacity * 1000;
-      const capacityText = `${capInkWp.toLocaleString(undefined, {maximumFractionDigits: 0})} kWp`;
+      const capacityText = window.formatProjectCapacityRow(p);
       const mapsUrl = (p.lat !== null && p.lng !== null && !isNaN(p.lat) && !isNaN(p.lng)) ? 'https://www.google.com/maps?q=' + p.lat + ',' + p.lng : '';
 
       row.innerHTML = `
@@ -1776,7 +1860,7 @@ class DashboardApp {
             <div class="fw-bold text-truncate" style="max-width: 140px;">${p.name}</div>
             <div class="mt-1 d-flex justify-content-between text-muted" style="font-size: 10px;">
               <span>${p.code}</span>
-              <span><strong>${p.capacity.toFixed(1)} MW</strong></span>
+              <span><strong>${window.formatProjectCapacityMW(p)}</strong></span>
             </div>
           `;
 
@@ -1958,19 +2042,21 @@ class DashboardApp {
     if (proj.systems) {
       const standardSystems = ['Rooftop', 'Farm', 'Floating', 'Carpark', 'BESS'];
       Object.entries(proj.systems).forEach(([sys, cap]) => {
-        if (standardSystems.includes(sys)) {
-          const chk = document.getElementById(`edit-project-system-${sys}`);
-          const capVal = document.getElementById(`edit-project-capacity-${sys}`);
-          const wrapper = document.getElementById(`edit-project-capacity-${sys}-wrapper`);
-          
-          if (chk && capVal && wrapper && cap > 0) {
-            chk.checked = true;
-            capVal.value = cap;
-            wrapper.style.display = 'block';
+        if (cap !== null && cap !== undefined) {
+          if (standardSystems.includes(sys)) {
+            const chk = document.getElementById(`edit-project-system-${sys}`);
+            const capVal = document.getElementById(`edit-project-capacity-${sys}`);
+            const wrapper = document.getElementById(`edit-project-capacity-${sys}-wrapper`);
+            
+            if (chk && capVal && wrapper) {
+              chk.checked = true;
+              capVal.value = cap;
+              wrapper.style.display = 'block';
+            }
+          } else {
+            // Custom system!
+            this.appendCustomSystemItem('edit-project-systems-container', sys, cap);
           }
-        } else if (cap > 0) {
-          // Custom system!
-          this.appendCustomSystemItem('edit-project-systems-container', sys, cap);
         }
       });
     }
@@ -1979,7 +2065,7 @@ class DashboardApp {
     this.renderDeliverables('edit-project-deliverables-list', proj.deliverables || []);
 
     // Load revisions
-    this.currentEditProjectRevisions = proj.revisions ? [...proj.revisions] : [];
+    this.currentEditProjectRevisions = Array.isArray(proj.revisions) ? [...proj.revisions] : [];
     this.renderRevisionsList('edit-project-revise-list', this.currentEditProjectRevisions);
 
     // Setup Add Revision listener
@@ -2003,7 +2089,7 @@ class DashboardApp {
       };
     }
 
-    // Reset image fields
+    // Reset image fields and set preview
     const editFileInp = document.getElementById('edit-project-image-file');
     if (editFileInp) {
       editFileInp.value = '';
@@ -2012,6 +2098,17 @@ class DashboardApp {
     const editUrlInp = document.getElementById('edit-project-image-url');
     if (editUrlInp) {
       editUrlInp.value = proj.image && !proj.image.startsWith('data:image') ? proj.image : '';
+    }
+    const editPreviewImg = document.getElementById('edit-project-image-preview');
+    const editPreviewWrapper = document.getElementById('edit-project-image-preview-wrapper');
+    if (editPreviewImg && editPreviewWrapper) {
+      if (proj.image) {
+        editPreviewImg.src = proj.image;
+        editPreviewWrapper.style.display = 'block';
+      } else {
+        editPreviewImg.src = '';
+        editPreviewWrapper.style.display = 'none';
+      }
     }
 
     const deleteBtn = document.getElementById('edit-project-delete-btn');
@@ -2092,12 +2189,13 @@ class DashboardApp {
     if (!container) return;
     container.innerHTML = '';
     
-    if (!revisions || revisions.length === 0) {
+    const list = Array.isArray(revisions) ? revisions : [];
+    if (list.length === 0) {
       container.innerHTML = '<div class="text-muted text-center py-2" style="font-size: 12px;">ไม่มีประวัติการ Revise</div>';
       return;
     }
     
-    revisions.forEach(rev => {
+    list.forEach(rev => {
       const item = document.createElement('div');
       item.className = 'list-group-item d-flex justify-content-between align-items-center py-2';
       item.style.fontSize = '12px';
@@ -2306,7 +2404,8 @@ class DashboardApp {
     if (!container) return;
     container.innerHTML = '';
     
-    deliverables.forEach(d => {
+    const list = Array.isArray(deliverables) ? deliverables : [];
+    list.forEach(d => {
       this.appendDeliverableItem(containerId, d);
     });
   }

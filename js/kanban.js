@@ -75,14 +75,15 @@ class KanbanBoard {
         }
 
         // Deliverables Checklist calculation & HTML
-        const totalDel = proj.deliverables ? proj.deliverables.length : 0;
-        const checkedDel = proj.deliverables ? proj.deliverables.filter(d => d.checked).length : 0;
+        const deliverablesList = Array.isArray(proj.deliverables) ? proj.deliverables : [];
+        const totalDel = deliverablesList.length;
+        const checkedDel = deliverablesList.filter(d => d.checked).length;
         const progressPercent = totalDel > 0 ? Math.round((checkedDel / totalDel) * 100) : 0;
 
         let deliverablesHtml = '';
-        if (proj.deliverables && proj.deliverables.length > 0) {
+        if (deliverablesList.length > 0) {
           deliverablesHtml = '<div class="my-2 d-flex flex-wrap gap-1">';
-          proj.deliverables.forEach((del, idx) => {
+          deliverablesList.forEach((del, idx) => {
             if (del.checked) {
               const badgeClass = 'kanban-del-checked';
               const iconClass = 'fas fa-check-circle';
@@ -97,10 +98,11 @@ class KanbanBoard {
         }
 
         let revisionsHtml = '';
-        if (proj.revisions && proj.revisions.length > 0) {
+        const revisionsList = Array.isArray(proj.revisions) ? proj.revisions : [];
+        if (revisionsList.length > 0) {
           revisionsHtml = '<div class="mt-2 border-top border-light pt-2" style="font-size: 11px; max-height: 80px; overflow-y: auto; width: 100%;">';
           revisionsHtml += '<div class="fw-semibold text-muted mb-1" style="font-size: 10.5px;"><i class="fas fa-history me-1"></i>Revisions:</div>';
-          proj.revisions.forEach(rev => {
+          revisionsList.forEach(rev => {
             revisionsHtml += `<div class="text-truncate mb-1" title="Rev ${rev.revNo}: ${rev.details}" style="font-size: 10px; color: var(--text-muted);"><span class="badge bg-secondary me-1" style="font-size: 8px; padding: 2px 4px;">Rev ${rev.revNo}</span>${rev.details}</div>`;
           });
           revisionsHtml += '</div>';
@@ -138,7 +140,7 @@ class KanbanBoard {
 
           <div class="kanban-card-meta border-top border-light pt-2 mt-2">
             <span><i class="fas fa-user-tie"></i> ${engineerName}</span>
-            <span><strong>${proj.capacity.toFixed(2)} MW</strong></span>
+            <span><strong>${window.formatProjectCapacityMW(proj)}</strong></span>
           </div>
           
           <div class="d-flex justify-content-between align-items-center mt-2" style="font-size: 11px; color: var(--text-muted);">
@@ -214,7 +216,7 @@ class KanbanBoard {
             e.preventDefault();
             e.stopPropagation();
             const delIndex = parseInt(chip.getAttribute('data-index'));
-            const deliverables = [...proj.deliverables];
+            const deliverables = [...(Array.isArray(proj.deliverables) ? proj.deliverables : [])];
             deliverables[delIndex].checked = !deliverables[delIndex].checked;
             window.db.updateProject(proj.id, { deliverables });
             this.render();

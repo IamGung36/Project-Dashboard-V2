@@ -340,27 +340,57 @@ class LocalDatabase {
 
     let migrated = false;
 
-    // Migrate older stage strings if any
-    this.data.projects.forEach(p => {
-      if (!p.revisions) {
-        p.revisions = [];
+    const migrateProjectFields = (p) => {
+      // 1. Systems
+      if (typeof p.systems === 'string' && p.systems.trim() !== '') {
+        try {
+          p.systems = JSON.parse(p.systems);
+          migrated = true;
+        } catch (e) {
+          p.systems = {};
+          migrated = true;
+        }
+      }
+      if (!p.systems || typeof p.systems !== 'object') {
+        p.systems = {};
         migrated = true;
       }
-      if (p.stage === 'Awarded') {
-        p.stage = 'Award';
-        migrated = true;
-      }
-      if (p.stage === 'Underdevelopment') {
-        p.stage = 'Underdevelop';
-        migrated = true;
-      }
-    });
 
-    this.data.awardedProjects.forEach(p => {
-      if (!p.revisions) {
+      // 2. Deliverables
+      if (typeof p.deliverables === 'string' && p.deliverables.trim() !== '') {
+        try {
+          p.deliverables = JSON.parse(p.deliverables);
+          migrated = true;
+        } catch (e) {
+          p.deliverables = [];
+          migrated = true;
+        }
+      }
+      if (!Array.isArray(p.deliverables)) {
+        p.deliverables = [];
+        migrated = true;
+      }
+      if (p.deliverables.length === 0) {
+        p.deliverables = JSON.parse(JSON.stringify(DEFAULT_DELIVERABLES));
+        migrated = true;
+      }
+
+      // 3. Revisions
+      if (typeof p.revisions === 'string' && p.revisions.trim() !== '') {
+        try {
+          p.revisions = JSON.parse(p.revisions);
+          migrated = true;
+        } catch (e) {
+          p.revisions = [];
+          migrated = true;
+        }
+      }
+      if (!Array.isArray(p.revisions)) {
         p.revisions = [];
         migrated = true;
       }
+      
+      // Migrate older stage strings if any
       if (p.stage === 'Awarded') {
         p.stage = 'Award';
         migrated = true;
@@ -369,7 +399,21 @@ class LocalDatabase {
         p.stage = 'Underdevelop';
         migrated = true;
       }
-    });
+
+      // Recalculate capacity excluding BESS
+      const sysObj = p.systems || {};
+      const solarCapacity = Object.entries(sysObj)
+        .filter(([sys]) => sys !== 'BESS')
+        .reduce((sum, [_, cap]) => sum + (parseFloat(cap) || 0), 0);
+      
+      if (p.capacity !== solarCapacity) {
+        p.capacity = solarCapacity;
+        migrated = true;
+      }
+    };
+
+    this.data.projects.forEach(migrateProjectFields);
+    this.data.awardedProjects.forEach(migrateProjectFields);
 
     // Partition projects by stage
     const pipelineProjects = [];
@@ -500,9 +544,11 @@ class LocalDatabase {
     // Auto run code G26-XXX
     const projectCode = this.generateNextProjectCode();
     
-    // Calculate total capacity
+    // Calculate total capacity (excluding BESS)
     const sysObj = project.systems || {};
-    const totalCapacity = Object.values(sysObj).reduce((sum, cap) => sum + (parseFloat(cap) || 0), 0);
+    const totalCapacity = Object.entries(sysObj)
+      .filter(([sys]) => sys !== 'BESS')
+      .reduce((sum, [_, cap]) => sum + (parseFloat(cap) || 0), 0);
 
     const newProject = {
       id: newId,
@@ -556,7 +602,9 @@ class LocalDatabase {
 
     const currentProject = this.data[listName][idx];
     const sysObj = updatedData.systems || currentProject.systems || {};
-    const totalCapacity = Object.values(sysObj).reduce((sum, cap) => sum + (parseFloat(cap) || 0), 0);
+    const totalCapacity = Object.entries(sysObj)
+      .filter(([sys]) => sys !== 'BESS')
+      .reduce((sum, [_, cap]) => sum + (parseFloat(cap) || 0), 0);
 
     const updatedProject = {
       ...currentProject,
@@ -785,3 +833,30 @@ class LocalDatabase {
 // Instantiate database globally
 const db = new LocalDatabase();
 window.db = db;
+
+// Global capacity formatting helpers
+window.formatProjectCapacityRow = function(p) {
+  let parts = [];
+  const solarCap = p.capacity || 0; // already excludes BESS
+  if (solarCap > 0) {
+    parts.push(`${(solarCap * 1000).toLocaleString(undefined, {maximumFractionDigits: 0})} kWp`);
+  }
+  if (p.systems && p.systems.BESS && parseFloat(p.systems.BESS) > 0) {
+    const bessCap = parseFloat(p.systems.BESS);
+    parts.push(`${(bessCap * 1000).toLocaleString(undefined, {maximumFractionDigits: 0})} kWh`);
+  }
+  return parts.length > 0 ? parts.join(' + ') : '0 kWp';
+};
+
+window.formatProjectCapacityMW = function(p) {
+  let parts = [];
+  const solarCap = p.capacity || 0; // already excludes BESS
+  if (solarCap > 0) {
+    parts.push(`${solarCap.toFixed(1)} MW`);
+  }
+  if (p.systems && p.systems.BESS && parseFloat(p.systems.BESS) > 0) {
+    const bessCap = parseFloat(p.systems.BESS);
+    parts.push(`${bessCap.toFixed(1)} MW (BESS)`);
+  }
+  return parts.length > 0 ? parts.join(' + ') : '0.0 MW';
+};

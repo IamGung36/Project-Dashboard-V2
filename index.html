@@ -104,7 +104,7 @@
     <div class="w-100 d-block d-lg-none bg-dark text-white p-3 border-bottom border-secondary fixed-top" style="z-index: 1040;">
       <div class="d-flex align-items-center justify-content-between">
         <div class="d-flex align-items-center gap-2">
-          <i class="fas fa-solar-panel text-success fs-4"></i>
+          <i class="fas fa-solar-panel text-warning fs-4"></i>
           <span class="fw-bold fs-6" style="font-family: 'Outfit'; white-space: nowrap;">PROJECT DASHBOARD</span>
         </div>
         <div class="d-flex align-items-center gap-3">
@@ -694,6 +694,11 @@
                       <input type="url" class="form-control border-success-subtle" id="project-image-url" placeholder="https://example.com/image.jpg">
                     </div>
                   </div>
+                  
+                  <div id="project-image-preview-wrapper" class="mb-4 text-center" style="display: none; background: rgba(0,0,0,0.02); padding: 10px; border-radius: 8px; border: 1px dashed var(--card-border);">
+                    <label class="form-label fw-bold d-block text-start"><i class="fas fa-eye text-success me-1"></i>Selected Image Preview</label>
+                    <img id="project-image-preview" src="" alt="Project Image Preview" class="img-thumbnail" style="max-height: 150px; object-fit: contain;">
+                  </div>
 
                   <h4 class="mb-4 text-success border-bottom pb-2 mt-5"><i class="fas fa-tasks text-success me-2"></i>Deliverables & Notes</h4>
 
@@ -1198,6 +1203,11 @@
                 <label for="edit-project-image-url" class="form-label fw-bold">Or Image URL</label>
                 <input type="url" class="form-control border-success-subtle" id="edit-project-image-url" placeholder="https://example.com/image.jpg">
               </div>
+            </div>
+            
+            <div id="edit-project-image-preview-wrapper" class="mb-3 text-center" style="display: none; background: rgba(0,0,0,0.02); padding: 10px; border-radius: 8px; border: 1px dashed var(--card-border);">
+              <label class="form-label fw-bold d-block text-start"><i class="fas fa-eye text-success me-1"></i>Current Image Preview</label>
+              <img id="edit-project-image-preview" src="" alt="Project Image Preview" class="img-thumbnail" style="max-height: 150px; object-fit: contain;">
             </div>
 
             <h5 class="text-success fw-bold border-top border-success-subtle pt-3 mb-3"><i class="fas fa-tasks text-success me-2"></i>Deliverables Checklist</h5>

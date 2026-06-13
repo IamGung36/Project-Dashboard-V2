@@ -87,7 +87,7 @@ class ManhoursTracker {
       memberProjects.forEach(proj => {
         projectMap[proj.id] = {
           project: proj,
-          deliverables: (proj.deliverables || []).map(d => d.name)
+          deliverables: (Array.isArray(proj.deliverables) ? proj.deliverables : []).map(d => d.name)
         };
       });
 
@@ -212,7 +212,7 @@ class ManhoursTracker {
           let subtaskWeeklySum = 0;
 
           // Find the deliverable hours in project deliverables
-          const projDel = (project.deliverables || []).find(d => d.name === delName);
+          const projDel = (Array.isArray(project.deliverables) ? project.deliverables : []).find(d => d.name === delName);
           const defaultHours = projDel && typeof projDel.hours === 'number' ? projDel.hours : 0;
 
           days.forEach(day => {
