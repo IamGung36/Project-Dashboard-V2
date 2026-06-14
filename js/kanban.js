@@ -2,7 +2,7 @@
 
 class KanbanBoard {
   constructor() {
-    this.columns = ['Standby', 'In Progress', 'Complete', 'Cancel'];
+    this.columns = ['Standby', 'In Progress', 'Award', 'Complete', 'Cancel'];
     this.draggedCard = null;
   }
 
@@ -16,9 +16,15 @@ class KanbanBoard {
     container.innerHTML = '';
 
     this.columns.forEach(col => {
-      // Group projects by status
+      // Group projects by status/stage
       const statusClass = col.replace(/\s+/g, '').toLowerCase();
-      const colProjects = projects.filter(p => p.status === col);
+      
+      let colProjects;
+      if (col === 'Award') {
+        colProjects = projects.filter(p => p.stage === 'Award');
+      } else {
+        colProjects = projects.filter(p => p.stage !== 'Award' && p.status === col);
+      }
       
       const colEl = document.createElement('div');
       colEl.className = `kanban-col ${statusClass}`;
@@ -28,6 +34,7 @@ class KanbanBoard {
       let titleIcon = 'fa-clock';
       if (col === 'Standby') { displayTitle = 'Standby'; titleIcon = 'fa-pause-circle'; }
       else if (col === 'In Progress') { displayTitle = 'In Progress'; titleIcon = 'fa-spinner fa-spin'; }
+      else if (col === 'Award') { displayTitle = 'Award'; titleIcon = 'fa-trophy text-warning'; }
       else if (col === 'Complete') { displayTitle = 'Complete'; titleIcon = 'fa-check-circle'; }
       else if (col === 'Cancel') { displayTitle = 'Cancel'; titleIcon = 'fa-times-circle'; }
 
@@ -341,12 +348,44 @@ class KanbanBoard {
     const projId = e.dataTransfer.getData('text/plain');
     if (!projId) return;
 
-    const success = window.db.updateProject(projId, { status: targetStatus });
-    
-    if (success) {
-      this.render();
-      if (window.app && typeof window.app.updateViews === 'function') {
-        window.app.updateViews();
+    const proj = window.db.getProject(projId);
+    if (!proj) return;
+
+    if (targetStatus === 'Award') {
+      const awardData = {
+        constructionDate: proj.constructionDate || '',
+        codDate: proj.codDate || '',
+        prTest: proj.prTest || '',
+        pv: proj.pv || '',
+        inverter: proj.inverter || '',
+        awardNote: proj.awardNote || ''
+      };
+      window.app.showAwardDetailsModal(proj.id, awardData, 
+        (data) => {
+          window.db.updateProject(proj.id, { 
+            stage: 'Award',
+            ...data
+          });
+          this.render();
+          if (window.app && typeof window.app.updateViews === 'function') {
+            window.app.updateViews();
+          }
+        },
+        () => {
+          // cancelled, do nothing
+        }
+      );
+    } else {
+      const updates = { status: targetStatus };
+      if (proj.stage === 'Award') {
+        updates.stage = 'Underdevelop';
+      }
+      const success = window.db.updateProject(projId, updates);
+      if (success) {
+        this.render();
+        if (window.app && typeof window.app.updateViews === 'function') {
+          window.app.updateViews();
+        }
       }
     }
 
