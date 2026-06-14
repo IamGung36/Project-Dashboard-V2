@@ -38,6 +38,7 @@ class LocalDatabase {
   constructor() {
     this.data = null;
     this.lastSaveTime = 0;
+    this.lastWriteTime = 0;
     this.isSaving = false;
     this.init();
     this.startRealtimeSync();
@@ -75,6 +76,7 @@ class LocalDatabase {
       
       const gasUrl = this.getGasUrl();
       if (gasUrl) {
+        const requestStartTime = Date.now();
         const cacheBuster = `&_t=${Date.now()}`;
         const url = gasUrl.indexOf('?') !== -1 ? `${gasUrl}&action=get${cacheBuster}` : `${gasUrl}?action=get${cacheBuster}`;
         fetch(url, { cache: 'no-store' })
@@ -83,6 +85,10 @@ class LocalDatabase {
             return res.json();
           })
           .then(serverDb => {
+            if (this.lastWriteTime && requestStartTime < this.lastWriteTime) {
+              console.log('Discarding real-time sync response: newer write occurred locally.');
+              return;
+            }
             if (serverDb && (serverDb.projects || serverDb.awardedProjects)) {
               const currentStr = stableStringify(this.data);
               const serverStr = stableStringify(serverDb);
@@ -280,6 +286,7 @@ class LocalDatabase {
   }
 
   fetchFromServer(gasUrl, force = false) {
+    const requestStartTime = Date.now();
     const cacheBuster = `&_t=${Date.now()}`;
     const url = gasUrl.indexOf('?') !== -1 ? `${gasUrl}&action=get${cacheBuster}` : `${gasUrl}?action=get${cacheBuster}`;
     return fetch(url, { cache: 'no-store' })
@@ -288,6 +295,10 @@ class LocalDatabase {
         return res.json();
       })
       .then(serverDb => {
+        if (this.lastWriteTime && requestStartTime < this.lastWriteTime) {
+          console.log('Discarding fetchFromServer response: newer write occurred locally.');
+          return this.data;
+        }
         if (serverDb && (serverDb.projects || serverDb.awardedProjects)) {
           const currentStr = stableStringify(this.data);
           const serverStr = stableStringify(serverDb);
@@ -313,6 +324,7 @@ class LocalDatabase {
   // Save current state to LocalStorage and remote GAS API if configured
   save() {
     try {
+      this.lastWriteTime = Date.now();
       localStorage.setItem(DB_KEY, JSON.stringify(this.data));
 
       const gasUrl = this.getGasUrl();
