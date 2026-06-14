@@ -124,11 +124,13 @@ class KanbanBoard {
           </div>
           <h4 class="kanban-card-title mb-2">${proj.name}</h4>
           
-          <div class="mb-2">
-            <a href="${proj.googleMapsLink || `https://www.google.com/maps?q=${proj.lat},${proj.lng}`}" target="_blank" class="kanban-location-link text-decoration-none fw-semibold" style="font-size: 12px; color: #2563eb; display: inline-flex; align-items: center; gap: 5px;">
-              <i class="fas fa-map-location-dot" style="color: #f87171;"></i> View Location
-            </a>
-          </div>
+          ${(proj.googleMapsLink || (proj.lat !== null && proj.lng !== null && !isNaN(proj.lat) && !isNaN(proj.lng) && typeof proj.lat === 'number' && typeof proj.lng === 'number')) ? `
+            <div class="mb-2">
+              <a href="${proj.googleMapsLink || `https://www.google.com/maps?q=${proj.lat},${proj.lng}`}" target="_blank" class="kanban-location-link text-decoration-none fw-semibold" style="font-size: 12px; color: #2563eb; display: inline-flex; align-items: center; gap: 5px;">
+                <i class="fas fa-map-location-dot" style="color: #f87171;"></i> View Location
+              </a>
+            </div>
+          ` : ''}
 
           <div class="mb-2">
             <div class="d-flex justify-content-between align-items-center mb-1" style="font-size: 11px;">

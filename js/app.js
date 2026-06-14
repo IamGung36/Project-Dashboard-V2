@@ -1773,7 +1773,7 @@ class DashboardApp {
       if (!systemsHtml) systemsHtml = '<span class="text-muted">-</span>';
 
       const capacityText = window.formatProjectCapacityRow(p);
-      const mapsUrl = (p.lat !== null && p.lng !== null && !isNaN(p.lat) && !isNaN(p.lng)) ? 'https://www.google.com/maps?q=' + p.lat + ',' + p.lng : '';
+      const mapsUrl = (p.lat !== null && p.lng !== null && !isNaN(p.lat) && !isNaN(p.lng) && typeof p.lat === 'number' && typeof p.lng === 'number') ? 'https://www.google.com/maps?q=' + p.lat + ',' + p.lng : '';
 
       const deliverablesList = Array.isArray(p.deliverables) ? p.deliverables : [];
       const totalDel = deliverablesList.length;
@@ -1797,7 +1797,7 @@ class DashboardApp {
         <td>
           ${mapsUrl ? `
             <a href="${mapsUrl}" target="_blank" class="btn btn-sm btn-outline-success py-0" style="font-size: 11px;">
-              <i class="fas fa-map-marker-alt"></i> ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}
+              <i class="fas fa-map-marker-alt"></i> ${(typeof p.lat === 'number') ? p.lat.toFixed(4) : p.lat}, ${(typeof p.lng === 'number') ? p.lng.toFixed(4) : p.lng}
             </a>
           ` : `
             <span class="text-muted" style="font-size: 11px;">
@@ -1998,7 +1998,7 @@ class DashboardApp {
       if (!systemsHtml) systemsHtml = '<span class="text-muted">-</span>';
 
       const capacityText = window.formatProjectCapacityRow(p);
-      const mapsUrl = (p.lat !== null && p.lng !== null && !isNaN(p.lat) && !isNaN(p.lng)) ? 'https://www.google.com/maps?q=' + p.lat + ',' + p.lng : '';
+      const mapsUrl = (p.lat !== null && p.lng !== null && !isNaN(p.lat) && !isNaN(p.lng) && typeof p.lat === 'number' && typeof p.lng === 'number') ? 'https://www.google.com/maps?q=' + p.lat + ',' + p.lng : '';
 
       const deliverablesList = Array.isArray(p.deliverables) ? p.deliverables : [];
       const totalDel = deliverablesList.length;
@@ -2022,7 +2022,7 @@ class DashboardApp {
         <td>
           ${mapsUrl ? `
             <a href="${mapsUrl}" target="_blank" class="btn btn-sm btn-outline-success py-0" style="font-size: 11px;">
-              <i class="fas fa-map-marker-alt"></i> ${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}
+              <i class="fas fa-map-marker-alt"></i> ${(typeof p.lat === 'number') ? p.lat.toFixed(4) : p.lat}, ${(typeof p.lng === 'number') ? p.lng.toFixed(4) : p.lng}
             </a>
           ` : `
             <span class="text-muted" style="font-size: 11px;">
@@ -2233,7 +2233,7 @@ class DashboardApp {
     document.getElementById('edit-project-client').value = proj.client;
     const coordsInput = document.getElementById('edit-project-coords');
     if (coordsInput) {
-      if (proj.lat !== null && proj.lng !== null && !isNaN(proj.lat) && !isNaN(proj.lng)) {
+      if (proj.lat !== null && proj.lng !== null && !isNaN(proj.lat) && !isNaN(proj.lng) && typeof proj.lat === 'number' && typeof proj.lng === 'number') {
         coordsInput.value = `${proj.lat.toFixed(6)}, ${proj.lng.toFixed(6)}`;
       } else {
         coordsInput.value = '';

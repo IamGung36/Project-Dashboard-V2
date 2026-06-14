@@ -209,6 +209,43 @@ class LocalDatabase {
         p.capacity = solarCapacity;
         migrated = true;
       }
+
+      // 4. Normalize lat and lng to either numbers or null
+      if (p.hasOwnProperty('lat')) {
+        if (p.lat === null || p.lat === undefined || p.lat === '' || isNaN(Number(p.lat)) || String(p.lat).trim() === '') {
+          if (p.lat !== null) {
+            p.lat = null;
+            migrated = true;
+          }
+        } else {
+          const parsed = parseFloat(p.lat);
+          if (p.lat !== parsed) {
+            p.lat = parsed;
+            migrated = true;
+          }
+        }
+      } else {
+        p.lat = null;
+        migrated = true;
+      }
+
+      if (p.hasOwnProperty('lng')) {
+        if (p.lng === null || p.lng === undefined || p.lng === '' || isNaN(Number(p.lng)) || String(p.lng).trim() === '') {
+          if (p.lng !== null) {
+            p.lng = null;
+            migrated = true;
+          }
+        } else {
+          const parsed = parseFloat(p.lng);
+          if (p.lng !== parsed) {
+            p.lng = parsed;
+            migrated = true;
+          }
+        }
+      } else {
+        p.lng = null;
+        migrated = true;
+      }
     };
 
     this.data.projects.forEach(migrateProjectFields);
