@@ -344,7 +344,7 @@ class LocalDatabase {
         this.data = JSON.parse(stored);
       } else {
         this.data = JSON.parse(JSON.stringify(DEFAULT_DB));
-        this.save();
+        localStorage.setItem(DB_KEY, JSON.stringify(this.data));
       }
 
       this.patchAndMigrate();
@@ -356,7 +356,7 @@ class LocalDatabase {
     } catch (e) {
       console.error('Failed to parse database, resetting to default.', e);
       this.data = JSON.parse(JSON.stringify(DEFAULT_DB));
-      this.save();
+      localStorage.setItem(DB_KEY, JSON.stringify(this.data));
     }
   }
 
