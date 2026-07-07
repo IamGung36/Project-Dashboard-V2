@@ -3379,6 +3379,18 @@ class DashboardApp {
     const detailsEl = document.getElementById(detailsId);
     const detailsHtml = detailsEl ? detailsEl.innerHTML : '';
 
+    // Get list KPI cards HTML
+    const kpiId = isPortfolio ? 'awarded-pipeline-summary-cards' : 'pipeline-summary-cards';
+    const kpiEl = document.getElementById(kpiId);
+    const kpiHtml = kpiEl ? kpiEl.innerHTML : '';
+
+    // Get list table HTML
+    const listTableId = isPortfolio ? 'awarded-pipeline-table-body' : 'pipeline-table-body';
+    const listTableEl = document.getElementById(listTableId);
+    const listTableHtml = listTableEl ? listTableEl.innerHTML : '';
+
+    const listTitle = isPortfolio ? 'Project Awarded' : 'Project Pipeline';
+
     // Get theme colors based on theme
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const bgTheme = isDark ? '#0b1610' : '#f8fafc';
@@ -3487,6 +3499,62 @@ class DashboardApp {
       background-color: rgba(2, 87, 37, 0.03);
     }
     
+    /* Project Summary Cards styling */
+    .pipeline-card {
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 100px;
+      transition: transform 0.2s ease;
+    }
+    .pipeline-card-title {
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Outfit', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .pipeline-card-value {
+      font-size: 18px;
+      font-weight: 800;
+      font-family: 'Outfit', sans-serif;
+      line-height: 1.2;
+    }
+    .pipeline-card-subtext {
+      font-size: 11px;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+    
+    /* Light Theme Pipeline Cards */
+    [data-theme="light"] .pipeline-card-total { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+    [data-theme="light"] .pipeline-card-rooftop { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+    [data-theme="light"] .pipeline-card-farm { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+    [data-theme="light"] .pipeline-card-float { background: #ecfeff; color: #0e7490; border-color: #cffafe; }
+    [data-theme="light"] .pipeline-card-carpark { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
+    [data-theme="light"] .pipeline-card-bess { background: #faf5ff; color: #6b21a8; border-color: #e9d5ff; }
+
+    /* Dark Theme Pipeline Cards */
+    [data-theme="dark"] .pipeline-card-total { background: rgba(30, 64, 175, 0.25); color: #93c5fd; border-color: rgba(147, 197, 253, 0.3); }
+    [data-theme="dark"] .pipeline-card-rooftop { background: rgba(194, 65, 12, 0.25); color: #fdba74; border-color: rgba(253, 186, 116, 0.3); }
+    [data-theme="dark"] .pipeline-card-farm { background: rgba(21, 128, 61, 0.25); color: #86efac; border-color: rgba(134, 239, 172, 0.3); }
+    [data-theme="dark"] .pipeline-card-float { background: rgba(14, 116, 144, 0.25); color: #67e8f9; border-color: rgba(103, 232, 249, 0.3); }
+    [data-theme="dark"] .pipeline-card-carpark { background: rgba(71, 85, 105, 0.25); color: #cbd5e1; border-color: rgba(203, 213, 225, 0.3); }
+    [data-theme="dark"] .pipeline-card-bess { background: rgba(107, 33, 168, 0.25); color: #d8b4fe; border-color: rgba(216, 180, 254, 0.3); }
+
+    /* Hide action column from exported table */
+    .project-list-table th:last-child, 
+    .project-list-table td:last-child {
+      display: none !important;
+    }
+    
     .footer {
       margin-top: 40px;
       font-size: 11px;
@@ -3495,6 +3563,25 @@ class DashboardApp {
       border-top: 1px solid var(--card-border);
       padding-top: 20px;
     }
+    
+    /* Progress bar and badges */
+    .progress {
+      background-color: var(--card-border);
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      height: 8px;
+    }
+    .badge {
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+    .bg-success { background-color: var(--primary-color) !important; }
+    .bg-secondary { background-color: var(--text-muted) !important; }
+    .text-end { text-align: right; }
+    .text-center { text-align: center; }
   </style>
 </head>
 <body>
@@ -3507,7 +3594,7 @@ class DashboardApp {
       </div>
     </div>
 
-    <div class="row g-4 align-items-stretch">
+    <div class="row g-4 align-items-stretch mb-5">
       <!-- Thailand Map (Left) -->
       <div class="col-lg-8">
         <div class="glass-card p-4 h-100 d-flex flex-column">
@@ -3555,6 +3642,45 @@ class DashboardApp {
         </div>
       </div>
     </div>
+
+    <!-- Project List Section -->
+    <div class="glass-card p-4">
+      <h3 class="text-success mb-1" style="font-weight: 800; font-size: 24px;">${listTitle}</h3>
+      <p class="text-muted mb-4" style="font-size: 13px;">${isPortfolio ? 'Consolidated database table listing all awarded projects with geographic coordinate links' : 'Consolidated database table listing all projects with geographic coordinate links'}</p>
+      
+      <!-- KPI Cards Row -->
+      <div class="row g-3 mb-4">
+        ${kpiHtml}
+      </div>
+      
+      <!-- Table -->
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 clean-modern-table project-list-table" style="font-size: 12px; width: 100%;">
+          <thead class="table-success border-success-subtle">
+            <tr>
+              <th>Project Code</th>
+              <th>Project Name</th>
+              <th>Region</th>
+              <th>BD Engineer</th>
+              <th>Investor</th>
+              <th>Business Type</th>
+              <th>Client</th>
+              <th>Systems (MW)</th>
+              <th class="text-end">Capacity</th>
+              <th>Location Link</th>
+              <th class="text-center">Due Date</th>
+              <th class="text-center">Status</th>
+              <th class="text-center">Stage</th>
+              <th class="text-center">Deliverables Checklist</th>
+              <th>Action</th> <!-- Hidden via CSS -->
+            </tr>
+          </thead>
+          <tbody>
+            ${listTableHtml}
+          </tbody>
+        </table>
+      </div>
+    </div>
     
     <div class="footer">
       Generated automatically by Project Dashboard. l Copyright &copy; 2026. All rights reserved.
@@ -3595,13 +3721,13 @@ class DashboardApp {
 
       L.marker([m.lat, m.lng], { icon: icon })
         .addTo(map)
-        .bindPopup(\`
+        .bindPopup(`
           <div style="font-family: 'Inter', sans-serif; font-size: 12px; line-height: 1.4;">
-            <b style="color: \\\${pinColor}; font-size: 13px;">\\\${m.code}</b><br>
-            <b>\\\${m.name}</b><br>
-            Capacity: \\\${parseFloat(m.capacity).toFixed(2)} MWp
+            <b style="color: \${pinColor}; font-size: 13px;">\${m.code}</b><br>
+            <b>\${m.name}</b><br>
+            Capacity: \${parseFloat(m.capacity).toFixed(2)} MWp
           </div>
-        \`);
+        `);
     });
 
     if (markers.length > 0) {
@@ -3639,7 +3765,7 @@ class DashboardApp {
           tooltip: {
             callbacks: {
               label: function(context) {
-                return \` \\\${context.label}: \\\${parseFloat(context.raw).toFixed(2)} MWp\`;
+                return ` \${context.label}: \${parseFloat(context.raw).toFixed(2)} MWp`;
               }
             }
           }
@@ -3696,16 +3822,6 @@ class DashboardApp {
 </body>
 </html>
     `;
-
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${type}_dashboard_export_${new Date().toISOString().split('T')[0]}.html`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
 
 }
 

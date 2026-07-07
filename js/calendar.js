@@ -2,7 +2,7 @@
 
 class ProjectCalendar {
   constructor() {
-    this.currentDate = new Date(2026, 5, 7); // June 7, 2026
+    this.currentDate = new Date(); // Start at today's date
     this.englishMonths = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
