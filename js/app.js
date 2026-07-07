@@ -3832,7 +3832,7 @@ class DashboardApp {
     link.click();
     document.body.removeChild(link);
   }
-
+}
 
 // Instantiate App
 window.app = new DashboardApp();
