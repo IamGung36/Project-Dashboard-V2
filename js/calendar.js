@@ -163,6 +163,11 @@ class ProjectCalendar {
     this.render();
   }
 
+  goToToday() {
+    this.currentDate = new Date();
+    this.render();
+  }
+
   // Action on calendar cell click
   handleDayClick(dateStr, holidays, deadlines) {
     const modalTitle = document.getElementById('calendarModalLabel');

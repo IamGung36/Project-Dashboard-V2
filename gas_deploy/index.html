@@ -157,6 +157,9 @@
               <h1 class="text-success mb-1">Portfolio (Awarded Projects)</h1>
               <p class="text-muted">Summary of renewable energy projects with active construction contracts</p>
             </div>
+            <button class="btn btn-outline-success px-3 fw-bold" onclick="window.app.exportAwarded('html')" style="border-radius: 8px; font-family: 'Outfit';">
+              <i class="far fa-file-code me-1"></i> Export HTML
+            </button>
           </div>
 
           <!-- Layout: Map on the Left (col-lg-8), Stacked Charts on the Right (col-lg-4) -->
@@ -226,6 +229,9 @@
               <h1 class="text-success mb-1">Project Overview (Underdevelopment)</h1>
               <p class="text-muted">Dashboard and metrics for pipeline projects in development stage</p>
             </div>
+            <button class="btn btn-outline-success px-3 fw-bold" onclick="window.app.exportPipeline('html')" style="border-radius: 8px; font-family: 'Outfit';">
+              <i class="far fa-file-code me-1"></i> Export HTML
+            </button>
           </div>
 
           <!-- Layout: Map on the Left (col-lg-8), Stacked Charts on the Right (col-lg-4) -->
@@ -843,6 +849,7 @@
             
             <div class="d-flex align-items-center gap-2">
               <button class="btn btn-outline-success" onclick="window.calendar.prevMonth()"><i class="fas fa-chevron-left"></i> Prev Month</button>
+              <button class="btn btn-success fw-semibold px-3" onclick="window.calendar.goToToday()" style="background-color: var(--primary-color); border-color: var(--primary-color); border-radius: 8px;">Today</button>
               <h4 class="m-0 px-3 fw-bold text-success" id="calendar-month-title" style="min-width: 200px; text-align: center;">-</h4>
               <button class="btn btn-outline-success" onclick="window.calendar.nextMonth()">Next Month <i class="fas fa-chevron-right"></i></button>
             </div>
@@ -951,7 +958,18 @@
               <div class="glass-card p-4">
                 <h5 class="text-success border-bottom pb-2 mb-3"><i class="fas fa-link text-success me-2"></i>Google Sheets Database Connection</h5>
                 <p class="text-muted fs-7">Connect this dashboard to your Google Sheets database in real-time. Enter your Google Apps Script Web App URL below. Leave blank to run in Local Storage mode.</p>
-                
+                <div class="mt-3 mb-3 p-3 rounded bg-success-subtle border border-success-subtle d-flex align-items-center justify-content-between">
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-file-excel text-success fs-4"></i>
+                    <div>
+                      <span class="fw-bold d-block text-success-emphasis" style="font-size: 13px;">Database Google Sheet</span>
+                      <span class="text-muted" style="font-size: 11px;">1i1xCILbxr0x3H8Mh0HOdCCJWvc1xQ-PdDXsvDaPaOH0</span>
+                    </div>
+                  </div>
+                  <a href="https://docs.google.com/spreadsheets/d/1i1xCILbxr0x3H8Mh0HOdCCJWvc1xQ-PdDXsvDaPaOH0/edit?gid=1197350960#gid=1197350960" target="_blank" class="btn btn-sm btn-success px-3 fw-bold" style="background-color: var(--primary-color); border-color: var(--primary-color);">
+                    <i class="fas fa-external-link-alt me-1"></i> Open Database
+                  </a>
+                </div>
                 <div class="row g-2 align-items-center">
                   <div class="col-md-9">
                     <input type="text" class="form-control border-success-subtle" id="gas-api-url" placeholder="https://script.google.com/macros/s/.../exec">
