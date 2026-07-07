@@ -3818,7 +3818,7 @@ class DashboardApp {
         }
       }]
     });
-  </script>
+  <\/script>
 </body>
 </html>
     `;
