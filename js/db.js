@@ -41,7 +41,8 @@ class LocalDatabase {
     this.lastWriteTime = 0;
     this.isSaving = false;
     this.init();
-    this.startRealtimeSync();
+    // Disabled background real-time sync as requested
+    // this.startRealtimeSync();
   }
 
   getGasUrl() {

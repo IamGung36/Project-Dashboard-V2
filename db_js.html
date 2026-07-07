@@ -42,7 +42,8 @@ class LocalDatabase {
     this.lastWriteTime = 0;
     this.isSaving = false;
     this.init();
-    this.startRealtimeSync();
+    // Disabled background real-time sync as requested
+    // this.startRealtimeSync();
   }
 
   getGasUrl() {
@@ -114,12 +115,31 @@ class LocalDatabase {
   // Initial load
   init() {
     try {
-      const stored = localStorage.getItem(DB_KEY);
-      if (stored) {
-        this.data = JSON.parse(stored);
-      } else {
-        this.data = JSON.parse(JSON.stringify(DEFAULT_DB));
+      // Check if database is pre-injected by Google Apps Script template
+      const dbElement = document.getElementById('gas-db-json');
+      let gasDb = null;
+      if (dbElement) {
+        try {
+          const text = dbElement.textContent.trim();
+          if (text && text !== 'null') {
+            gasDb = JSON.parse(text);
+          }
+        } catch (e) {
+          console.error('Failed to parse pre-injected database:', e);
+        }
+      }
+
+      if (gasDb) {
+        this.data = gasDb;
         localStorage.setItem(DB_KEY, JSON.stringify(this.data));
+      } else {
+        const stored = localStorage.getItem(DB_KEY);
+        if (stored) {
+          this.data = JSON.parse(stored);
+        } else {
+          this.data = JSON.parse(JSON.stringify(DEFAULT_DB));
+          localStorage.setItem(DB_KEY, JSON.stringify(this.data));
+        }
       }
 
       this.patchAndMigrate();
