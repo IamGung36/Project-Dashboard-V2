@@ -3367,472 +3367,300 @@ class DashboardApp {
   exportDashboardHTML(type) {
     const isPortfolio = type === 'portfolio';
     const title = isPortfolio ? 'Portfolio (Awarded Projects)' : 'Project Overview (Underdevelopment)';
-    const subtitle = isPortfolio ? 'Summary of renewable energy projects with active construction contracts' : 'Dashboard and metrics for pipeline projects in development stage';
+    const subtitle = isPortfolio
+      ? 'Summary of renewable energy projects with active construction contracts'
+      : 'Dashboard and metrics for pipeline projects in development stage';
     const projects = isPortfolio ? this.getFilteredAwardedProjects() : this.getFilteredPipelineProjects();
-    
-    // Get table HTML
-    const tableBodyId = isPortfolio ? 'portfolio-region-table-body' : 'overview-region-table-body';
-    const tableBodyEl = document.getElementById(tableBodyId);
+
+    // Get regional table HTML
+    const tableBodyEl = document.getElementById(isPortfolio ? 'portfolio-region-table-body' : 'overview-region-table-body');
     const tableHtml = tableBodyEl ? tableBodyEl.innerHTML : '';
 
     // Get system details HTML
-    const detailsId = isPortfolio ? 'portfolio-system-details' : 'overview-system-details';
-    const detailsEl = document.getElementById(detailsId);
+    const detailsEl = document.getElementById(isPortfolio ? 'portfolio-system-details' : 'overview-system-details');
     const detailsHtml = detailsEl ? detailsEl.innerHTML : '';
 
-    // Get list KPI cards HTML
-    const kpiId = isPortfolio ? 'awarded-pipeline-summary-cards' : 'pipeline-summary-cards';
-    const kpiEl = document.getElementById(kpiId);
+    // Get KPI summary cards HTML
+    const kpiEl = document.getElementById(isPortfolio ? 'awarded-pipeline-summary-cards' : 'pipeline-summary-cards');
     const kpiHtml = kpiEl ? kpiEl.innerHTML : '';
 
-    // Get list table HTML
-    const listTableId = isPortfolio ? 'awarded-pipeline-table-body' : 'pipeline-table-body';
-    const listTableEl = document.getElementById(listTableId);
+    // Get project list table HTML
+    const listTableEl = document.getElementById(isPortfolio ? 'awarded-pipeline-table-body' : 'pipeline-table-body');
     const listTableHtml = listTableEl ? listTableEl.innerHTML : '';
 
     const listTitle = isPortfolio ? 'Project Awarded' : 'Project Pipeline';
+    const listDesc = isPortfolio
+      ? 'Consolidated database table listing all awarded projects with geographic coordinate links'
+      : 'Consolidated database table listing all projects with geographic coordinate links';
 
-    // Get theme colors based on theme
+    // Theme
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const bgTheme = isDark ? '#0b1610' : '#f8fafc';
-    const cardBg = isDark ? 'rgba(17, 34, 24, 0.45)' : 'rgba(255, 255, 255, 0.45)';
-    const cardBorder = isDark ? 'rgba(26, 51, 36, 0.8)' : 'rgba(2, 87, 37, 0.08)';
-    const textColor = isDark ? '#e2ece6' : '#1f2937';
-    const textMuted = isDark ? '#8ca395' : '#6b7280';
+    const bgTheme     = isDark ? '#0b1610'                : '#f8fafc';
+    const cardBg      = isDark ? 'rgba(17,34,24,0.45)'   : 'rgba(255,255,255,0.45)';
+    const cardBorder  = isDark ? 'rgba(26,51,36,0.8)'    : 'rgba(2,87,37,0.08)';
+    const textColor   = isDark ? '#e2ece6'                : '#1f2937';
+    const textMuted   = isDark ? '#8ca395'                : '#6b7280';
     const primaryColor = '#025725';
+    const pinColor     = isPortfolio ? '#025725' : '#ea580c';
 
-    // Prepare map markers
-    const markersData = projects.map(p => {
-      return {
-        name: p.name,
-        code: p.code,
-        lat: p.lat,
-        lng: p.lng,
-        capacity: p.capacity
-      };
-    }).filter(m => m.lat !== null && m.lng !== null);
+    // Map markers
+    const markersData = projects
+      .map(p => ({ name: p.name, code: p.code, lat: p.lat, lng: p.lng, capacity: p.capacity }))
+      .filter(m => m.lat !== null && m.lng !== null && m.lat !== undefined && m.lng !== undefined);
 
-    // Prepare chart totals
+    // Chart data
     const systemTotals = { Rooftop: 0, Farm: 0, Floating: 0, Carpark: 0, BESS: 0 };
     projects.forEach(p => {
       if (p.systems) {
-        Object.entries(p.systems).forEach(([sysName, cap]) => {
-          if (systemTotals[sysName] !== undefined) {
-            systemTotals[sysName] += cap;
-          }
+        Object.entries(p.systems).forEach(([k, v]) => {
+          if (systemTotals[k] !== undefined) systemTotals[k] += v;
         });
       }
     });
-
-    const chartLabels = ['Rooftop', 'Farm', 'Floating', 'Carpark', 'BESS [Battery Storage]'];
-    const chartData = [systemTotals.Rooftop, systemTotals.Farm, systemTotals.Floating, systemTotals.Carpark, systemTotals.BESS];
+    const chartLabels = ['Rooftop', 'Farm', 'Floating', 'Carpark', 'BESS'];
+    const chartData   = [systemTotals.Rooftop, systemTotals.Farm, systemTotals.Floating, systemTotals.Carpark, systemTotals.BESS];
     const chartColors = ['#10b981', '#0ea5e9', '#06b6d4', '#f97316', '#ef4444'];
+    const totalMW     = chartData.reduce((a, b) => a + b, 0);
 
-    const htmlContent = `
-<!DOCTYPE html>
+    const htmlContent = `<!DOCTYPE html>
 <html lang="en" data-theme="${isDark ? 'dark' : 'light'}">
 <head>
-  <meta charset="UTF-8">
-  <title>${title}</title>
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Bootstrap 5 CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- FontAwesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  
-  <style>
-    :root {
-      --primary-color: ${primaryColor};
-      --bg-theme: ${bgTheme};
-      --card-bg: ${cardBg};
-      --card-border: ${cardBorder};
-      --text-color: ${textColor};
-      --text-muted: ${textMuted};
-    }
-    
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: var(--bg-theme);
-      color: var(--text-color);
-      padding: 30px;
-      margin: 0;
-    }
-    
-    h1, h2, h3, h4, h5, h6 {
-      font-family: 'Outfit', sans-serif;
-    }
-    
-    .glass-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
-      transition: all 0.3s ease;
-    }
-    
-    .map-container {
-      border-radius: 12px;
-      overflow: hidden;
-      border: 1px solid var(--card-border);
-      min-height: 450px;
-    }
-    
-    /* Clean and modern table design */
-    .clean-modern-table th {
-      background-color: transparent !important;
-      color: var(--primary-color) !important;
-      font-family: 'Outfit', sans-serif;
-      text-transform: uppercase;
-      font-size: 11px;
-      letter-spacing: 0.05em;
-      border-bottom: 2px solid var(--card-border) !important;
-    }
-    .clean-modern-table td {
-      border-bottom: 1px solid var(--card-border) !important;
-      color: var(--text-color);
-    }
-    .clean-modern-table tr:hover {
-      background-color: rgba(2, 87, 37, 0.03);
-    }
-    
-    /* Project Summary Cards styling */
-    .pipeline-card {
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      min-height: 100px;
-      transition: transform 0.2s ease;
-    }
-    .pipeline-card-title {
-      font-size: 12px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-family: 'Outfit', sans-serif;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .pipeline-card-value {
-      font-size: 18px;
-      font-weight: 800;
-      font-family: 'Outfit', sans-serif;
-      line-height: 1.2;
-    }
-    .pipeline-card-subtext {
-      font-size: 11px;
-      margin-top: 4px;
-      font-weight: 500;
-    }
-    
-    /* Light Theme Pipeline Cards */
-    [data-theme="light"] .pipeline-card-total { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
-    [data-theme="light"] .pipeline-card-rooftop { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
-    [data-theme="light"] .pipeline-card-farm { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
-    [data-theme="light"] .pipeline-card-float { background: #ecfeff; color: #0e7490; border-color: #cffafe; }
-    [data-theme="light"] .pipeline-card-carpark { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
-    [data-theme="light"] .pipeline-card-bess { background: #faf5ff; color: #6b21a8; border-color: #e9d5ff; }
-
-    /* Dark Theme Pipeline Cards */
-    [data-theme="dark"] .pipeline-card-total { background: rgba(30, 64, 175, 0.25); color: #93c5fd; border-color: rgba(147, 197, 253, 0.3); }
-    [data-theme="dark"] .pipeline-card-rooftop { background: rgba(194, 65, 12, 0.25); color: #fdba74; border-color: rgba(253, 186, 116, 0.3); }
-    [data-theme="dark"] .pipeline-card-farm { background: rgba(21, 128, 61, 0.25); color: #86efac; border-color: rgba(134, 239, 172, 0.3); }
-    [data-theme="dark"] .pipeline-card-float { background: rgba(14, 116, 144, 0.25); color: #67e8f9; border-color: rgba(103, 232, 249, 0.3); }
-    [data-theme="dark"] .pipeline-card-carpark { background: rgba(71, 85, 105, 0.25); color: #cbd5e1; border-color: rgba(203, 213, 225, 0.3); }
-    [data-theme="dark"] .pipeline-card-bess { background: rgba(107, 33, 168, 0.25); color: #d8b4fe; border-color: rgba(216, 180, 254, 0.3); }
-
-    /* Hide action column from exported table */
-    .project-list-table th:last-child, 
-    .project-list-table td:last-child {
-      display: none !important;
-    }
-    
-    .footer {
-      margin-top: 40px;
-      font-size: 11px;
-      color: var(--text-muted);
-      text-align: center;
-      border-top: 1px solid var(--card-border);
-      padding-top: 20px;
-    }
-    
-    /* Progress bar and badges */
-    .progress {
-      background-color: var(--card-border);
-      border-radius: 4px;
-      overflow: hidden;
-      display: flex;
-      height: 8px;
-    }
-    .badge {
-      font-weight: 600;
-      padding: 4px 8px;
-      border-radius: 6px;
-      display: inline-block;
-    }
-    .bg-success { background-color: var(--primary-color) !important; }
-    .bg-secondary { background-color: var(--text-muted) !important; }
-    .text-end { text-align: right; }
-    .text-center { text-align: center; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${title}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*{box-sizing:border-box;}
+body{font-family:'Inter',sans-serif;background:${bgTheme};color:${textColor};padding:24px;margin:0;}
+h1,h2,h3,h4,h5,h6{font-family:'Outfit',sans-serif;}
+.glass-card{background:${cardBg};border:1px solid ${cardBorder};border-radius:16px;padding:20px;box-shadow:0 4px 24px rgba(0,0,0,0.06);}
+#map{width:100%;height:480px;border-radius:12px;border:1px solid ${cardBorder};display:block;}
+#chart-wrap{position:relative;width:240px;height:240px;margin:0 auto 16px;}
+#doughnutChart{display:block;}
+.pipeline-card{border:1px solid ${cardBorder};border-radius:12px;padding:14px;display:flex;flex-direction:column;min-height:90px;}
+.pipeline-card-title{font-size:11px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:5px;font-family:'Outfit',sans-serif;text-transform:uppercase;letter-spacing:0.5px;}
+.pipeline-card-value{font-size:17px;font-weight:800;font-family:'Outfit',sans-serif;line-height:1.2;}
+.pipeline-card-subtext{font-size:11px;margin-top:4px;font-weight:500;}
+[data-theme="light"] .pipeline-card-total{background:#eff6ff;color:#1e40af;border-color:#bfdbfe;}
+[data-theme="light"] .pipeline-card-rooftop{background:#fff7ed;color:#c2410c;border-color:#fed7aa;}
+[data-theme="light"] .pipeline-card-farm{background:#f0fdf4;color:#15803d;border-color:#bbf7d0;}
+[data-theme="light"] .pipeline-card-float{background:#ecfeff;color:#0e7490;border-color:#cffafe;}
+[data-theme="light"] .pipeline-card-carpark{background:#f8fafc;color:#475569;border-color:#e2e8f0;}
+[data-theme="light"] .pipeline-card-bess{background:#faf5ff;color:#6b21a8;border-color:#e9d5ff;}
+[data-theme="dark"] .pipeline-card-total{background:rgba(30,64,175,.25);color:#93c5fd;border-color:rgba(147,197,253,.3);}
+[data-theme="dark"] .pipeline-card-rooftop{background:rgba(194,65,12,.25);color:#fdba74;border-color:rgba(253,186,116,.3);}
+[data-theme="dark"] .pipeline-card-farm{background:rgba(21,128,61,.25);color:#86efac;border-color:rgba(134,239,172,.3);}
+[data-theme="dark"] .pipeline-card-float{background:rgba(14,116,144,.25);color:#67e8f9;border-color:rgba(103,232,249,.3);}
+[data-theme="dark"] .pipeline-card-carpark{background:rgba(71,85,105,.25);color:#cbd5e1;border-color:rgba(203,213,225,.3);}
+[data-theme="dark"] .pipeline-card-bess{background:rgba(107,33,168,.25);color:#d8b4fe;border-color:rgba(216,180,254,.3);}
+.tbl th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:${primaryColor};border-bottom:2px solid ${cardBorder};background:transparent;}
+.tbl td{border-bottom:1px solid ${cardBorder};font-size:12px;color:${textColor};}
+.project-list-table th:last-child,.project-list-table td:last-child{display:none!important;}
+.footer{margin-top:32px;font-size:11px;color:${textMuted};text-align:center;border-top:1px solid ${cardBorder};padding-top:16px;}
+.badge{font-weight:600;padding:3px 8px;border-radius:6px;display:inline-block;font-size:11px;}
+.bg-success{background-color:${primaryColor}!important;}
+.bg-warning{background-color:#f59e0b!important;}
+.bg-secondary{background-color:${textMuted}!important;}
+.text-dark{color:#111!important;}
+.progress{background:${cardBorder};border-radius:4px;overflow:hidden;height:8px;display:flex;}
+</style>
 </head>
 <body>
+<div class="container-fluid">
 
-  <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h1 class="text-success mb-1" style="font-weight: 800; font-size: 28px;">${title}</h1>
-        <p class="text-muted mb-0" style="font-size: 14px;">${subtitle} l Generated on ${new Date().toLocaleString()}</p>
-      </div>
-    </div>
-
-    <div class="row g-4 align-items-stretch mb-5">
-      <!-- Thailand Map (Left) -->
-      <div class="col-lg-8">
-        <div class="glass-card p-4 h-100 d-flex flex-column">
-          <h5 class="mb-3 text-success-emphasis" style="font-weight: 700;"><i class="fas fa-map-marked-alt text-success me-2"></i>Project Coordinates on Thailand Map</h5>
-          <div id="map" class="map-container flex-grow-1"></div>
-        </div>
-      </div>
-      
-      <!-- Charts & Tables (Right) -->
-      <div class="col-lg-4 d-flex flex-column justify-content-between">
-        <!-- Doughnut Chart -->
-        <div class="glass-card p-4 mb-4 flex-grow-1 d-flex flex-column">
-          <h5 class="mb-3 text-success-emphasis" style="font-weight: 700;"><i class="fas fa-chart-pie text-success me-2"></i>Portfolio (MWp)</h5>
-          <div class="d-flex flex-column flex-grow-1 align-items-center justify-content-between">
-            <div style="position: relative; height: 260px; width: 100%; max-width: 260px; margin: 0 auto 15px auto;">
-              <canvas id="doughnutChart"></canvas>
-            </div>
-            <div id="system-details" style="width: 100%;">
-              ${detailsHtml}
-            </div>
-          </div>
-        </div>
-        
-        <!-- Regional Table -->
-        <div class="glass-card p-4 flex-grow-1 d-flex flex-column">
-          <h5 class="mb-3 text-success-emphasis" style="font-weight: 700;"><i class="fas fa-table text-success me-2"></i>Solar Capacity by Region (MWp)</h5>
-          <div class="table-responsive">
-            <table class="table table-sm text-center align-middle mb-0 clean-modern-table" style="font-size: 11px; width: 100%;">
-              <thead>
-                <tr class="border-bottom border-success-subtle fw-bold" style="color: var(--primary-color);">
-                  <th class="text-start ps-2">System Type</th>
-                  <th>Central</th>
-                  <th>North</th>
-                  <th>South</th>
-                  <th>Northeast</th>
-                  <th>East</th>
-                  <th>West</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${tableHtml}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Project List Section -->
-    <div class="glass-card p-4">
-      <h3 class="text-success mb-1" style="font-weight: 800; font-size: 24px;">${listTitle}</h3>
-      <p class="text-muted mb-4" style="font-size: 13px;">${isPortfolio ? 'Consolidated database table listing all awarded projects with geographic coordinate links' : 'Consolidated database table listing all projects with geographic coordinate links'}</p>
-      
-      <!-- KPI Cards Row -->
-      <div class="row g-3 mb-4">
-        ${kpiHtml}
-      </div>
-      
-      <!-- Table -->
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0 clean-modern-table project-list-table" style="font-size: 12px; width: 100%;">
-          <thead class="table-success border-success-subtle">
-            <tr>
-              <th>Project Code</th>
-              <th>Project Name</th>
-              <th>Region</th>
-              <th>BD Engineer</th>
-              <th>Investor</th>
-              <th>Business Type</th>
-              <th>Client</th>
-              <th>Systems (MW)</th>
-              <th class="text-end">Capacity</th>
-              <th>Location Link</th>
-              <th class="text-center">Due Date</th>
-              <th class="text-center">Status</th>
-              <th class="text-center">Stage</th>
-              <th class="text-center">Deliverables Checklist</th>
-              <th>Action</th> <!-- Hidden via CSS -->
-            </tr>
-          </thead>
-          <tbody>
-            ${listTableHtml}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    
-    <div class="footer">
-      Generated automatically by Project Dashboard. l Copyright &copy; 2026. All rights reserved.
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+      <h1 style="font-weight:800;font-size:26px;color:${primaryColor};">${title}</h1>
+      <p style="color:${textMuted};font-size:13px;margin:0;">${subtitle}<br><small>Generated: ${new Date().toLocaleString()}</small></p>
     </div>
   </div>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+  <!-- Dashboard Row -->
+  <div class="row g-4 mb-5">
 
-  <script>
-    // Initialize Leaflet Map
-    const map = L.map('map').setView([13.736717, 100.523186], 6);
-    
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    <!-- Map -->
+    <div class="col-lg-8">
+      <div class="glass-card h-100">
+        <h6 style="font-weight:700;color:${primaryColor};margin-bottom:14px;">
+          <i class="fas fa-map-marked-alt me-2"></i>Project Coordinates on Thailand Map
+        </h6>
+        <div id="map"></div>
+      </div>
+    </div>
+
+    <!-- Right Column -->
+    <div class="col-lg-4">
+      <!-- Donut Chart -->
+      <div class="glass-card mb-4">
+        <h6 style="font-weight:700;color:${primaryColor};margin-bottom:14px;">
+          <i class="fas fa-chart-pie me-2"></i>Portfolio (MWp)
+        </h6>
+        <div id="chart-wrap">
+          <canvas id="doughnutChart" width="240" height="240"></canvas>
+        </div>
+        <div>${detailsHtml}</div>
+      </div>
+
+      <!-- Regional Table -->
+      <div class="glass-card">
+        <h6 style="font-weight:700;color:${primaryColor};margin-bottom:14px;">
+          <i class="fas fa-table me-2"></i>Solar Capacity by Region (MWp)
+        </h6>
+        <div class="table-responsive">
+          <table class="table table-sm text-center align-middle mb-0 tbl">
+            <thead>
+              <tr>
+                <th class="text-start">System</th>
+                <th>Central</th><th>North</th><th>South</th>
+                <th>NE</th><th>East</th><th>West</th>
+              </tr>
+            </thead>
+            <tbody>${tableHtml}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Project List -->
+  <div class="glass-card">
+    <h4 style="font-weight:800;color:${primaryColor};">${listTitle}</h4>
+    <p style="color:${textMuted};font-size:12px;">${listDesc}</p>
+    <div class="row g-3 mb-4">${kpiHtml}</div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0 tbl project-list-table" style="font-size:12px;">
+        <thead class="table-success">
+          <tr>
+            <th>Code</th><th>Project Name</th><th>Region</th><th>Engineer</th>
+            <th>Investor</th><th>Type</th><th>Client</th><th>Systems</th>
+            <th class="text-end">Capacity</th><th>Location</th>
+            <th class="text-center">Due Date</th><th class="text-center">Status</th>
+            <th class="text-center">Stage</th><th class="text-center">Checklist</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>${listTableHtml}</tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">Generated by Project Dashboard &copy; 2026</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>
+<script>
+(function(){
+  var MARKERS  = ${JSON.stringify(markersData)};
+  var C_LABELS = ${JSON.stringify(chartLabels)};
+  var C_DATA   = ${JSON.stringify(chartData)};
+  var C_COLORS = ${JSON.stringify(chartColors)};
+  var TOTAL_MW = ${JSON.stringify(totalMW)};
+  var N_PROJ   = ${projects.length};
+  var PIN_COLOR = '${pinColor}';
+  var IS_DARK   = ${isDark};
+
+  /* ---- MAP ---- */
+  var mapEl = document.getElementById('map');
+  if (mapEl && typeof L !== 'undefined') {
+    var map = L.map('map', { scrollWheelZoom: false });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+      attribution:'&copy; OSM contributors &copy; CARTO'
     }).addTo(map);
 
-    // Markers Data
-    const markers = ${JSON.stringify(markersData)};
-    
-    // Custom Pin Colors
-    const pinColor = '${isPortfolio ? '#025725' : '#ea580c'}';
-    
-    function getPinIconSvg(color) {
-      const colorVal = encodeURIComponent(color);
-      return "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='36' height='36'><path fill='" + colorVal + "' d='M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z'/></svg>";
+    function pinSvg(color){
+      var c = encodeURIComponent(color);
+      return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32"><path fill="'+c+'" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>';
     }
 
-    markers.forEach(m => {
-      const icon = L.icon({
-        iconUrl: getPinIconSvg(pinColor),
-        iconSize: [36, 36],
-        iconAnchor: [18, 36],
-        popupAnchor: [0, -32]
-      });
-
-      L.marker([m.lat, m.lng], { icon: icon })
-        .addTo(map)
-        .bindPopup(
-          "<div style='font-family: \"Inter\", sans-serif; font-size: 12px; line-height: 1.4;'>" +
-            "<b style='color: " + pinColor + "; font-size: 13px;'>" + m.code + "</b><br>" +
-            "<b>" + m.name + "</b><br>" +
-            "Capacity: " + parseFloat(m.capacity).toFixed(2) + " MWp" +
-          "</div>"
-        );
+    var bounds = [];
+    MARKERS.forEach(function(m){
+      var icon = L.icon({ iconUrl: pinSvg(PIN_COLOR), iconSize:[32,32], iconAnchor:[16,32], popupAnchor:[0,-30] });
+      var popup = '<b style="color:'+PIN_COLOR+'">'+m.code+'</b><br>'+m.name+'<br>'+parseFloat(m.capacity).toFixed(2)+' MWp';
+      L.marker([m.lat, m.lng], {icon:icon}).addTo(map).bindPopup(popup);
+      bounds.push([m.lat, m.lng]);
     });
 
-    if (markers.length > 0) {
-      const bounds = L.latLngBounds(markers.map(m => [m.lat, m.lng]));
-      map.fitBounds(bounds, { padding: [30, 30] });
+    if (bounds.length > 0) {
+      map.fitBounds(bounds, {padding:[40,40]});
+    } else {
+      map.setView([13.74, 100.52], 6);
     }
 
-    // Initialize Chart.js
-    const ctx = document.getElementById('doughnutChart').getContext('2d');
-    const chartLabels = ${JSON.stringify(chartLabels)};
-    const chartData = ${JSON.stringify(chartData)};
-    const chartColors = ${JSON.stringify(chartColors)};
-    const totalVal = chartData.reduce((a, b) => a + b, 0);
-    const projectsCount = ${projects.length};
-    const isDark = ${isDark};
+    setTimeout(function(){ map.invalidateSize(); }, 300);
+  }
 
+  /* ---- CHART ---- */
+  var canvas = document.getElementById('doughnutChart');
+  if (canvas && typeof Chart !== 'undefined') {
+    var ctx = canvas.getContext('2d');
     new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: chartLabels,
+        labels: C_LABELS,
         datasets: [{
-          data: chartData,
-          backgroundColor: chartColors,
+          data: C_DATA,
+          backgroundColor: C_COLORS,
           borderColor: 'transparent',
-          borderWidth: 1
+          borderWidth: 2
         }]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: false,
+        animation: false,
         plugins: {
-          legend: {
-            display: false
-          },
+          legend: { display: false },
           tooltip: {
             callbacks: {
-              label: function(context) {
-                return " " + context.label + ": " + parseFloat(context.raw).toFixed(2) + " MWp";
-              }
+              label: function(ctx){ return ' '+ctx.label+': '+parseFloat(ctx.raw).toFixed(2)+' MWp'; }
             }
           }
         },
-        cutout: '55%'
+        cutout: '58%'
       },
       plugins: [{
-        id: 'centerText',
-        beforeDraw: function(chart) {
-          const width = chart.width,
-                height = chart.height,
-                ctx = chart.ctx;
-          ctx.restore();
-          
-          let innerRadius = 80;
-          try {
-            const meta = chart.getDatasetMeta(0);
-            if (meta && meta.data && meta.data[0] && typeof meta.data[0].innerRadius === 'number') {
-              innerRadius = meta.data[0].innerRadius;
-            }
-          } catch (e) {}
-          
-          ctx.textBaseline = "middle";
-          
-          const valueText = totalVal.toFixed(2) + " MWp";
-          const valFontSize = Math.round(innerRadius * 0.22);
-          ctx.font = "bold " + valFontSize + "px Outfit, sans-serif";
-          ctx.fillStyle = isDark ? "#e2ece6" : "#0d1a12";
-          const valueX = Math.round((width - ctx.measureText(valueText).width) / 2);
-          const valueY = height / 2 - 14;
-          ctx.fillText(valueText, valueX, valueY);
+        id: 'center',
+        afterDraw: function(chart){
+          var c = chart.ctx, w = chart.width, h = chart.height;
+          c.save();
+          c.textAlign = 'center';
+          c.textBaseline = 'middle';
 
-          const labelText = "TOTAL";
-          const labelFontSize = Math.round(innerRadius * 0.14);
-          ctx.font = "bold " + labelFontSize + "px Inter, sans-serif";
-          ctx.fillStyle = isDark ? "#8ca395" : "#536b5c";
-          const labelX = Math.round((width - ctx.measureText(labelText).width) / 2);
-          const labelY = height / 2 + 6;
-          ctx.fillText(labelText, labelX, labelY);
+          c.font = 'bold 15px Outfit,sans-serif';
+          c.fillStyle = IS_DARK ? '#e2ece6' : '#0d1a12';
+          c.fillText(TOTAL_MW.toFixed(1)+' MWp', w/2, h/2 - 10);
 
-          const projCountText = projectsCount + " " + (projectsCount === 1 ? 'Project' : 'Projects');
-          const projFontSize = Math.round(innerRadius * 0.13);
-          ctx.font = "bold " + projFontSize + "px Inter, sans-serif";
-          ctx.fillStyle = isDark ? "#8ca395" : "#536b5c";
-          const projX = Math.round((width - ctx.measureText(projCountText).width) / 2);
-          const projY = height / 2 + 22;
-          ctx.fillText(projCountText, projX, projY);
-          
-          ctx.save();
+          c.font = 'bold 10px Inter,sans-serif';
+          c.fillStyle = IS_DARK ? '#8ca395' : '#536b5c';
+          c.fillText('TOTAL', w/2, h/2 + 8);
+
+          c.font = 'bold 10px Inter,sans-serif';
+          c.fillText(N_PROJ+' '+(N_PROJ===1?'Project':'Projects'), w/2, h/2 + 22);
+          c.restore();
         }
       }]
     });
-  <\/script>
+  }
+})();
+<\/script>
 </body>
-</html>
-    `;
+</html>`;
 
     const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${type}_dashboard_export_${new Date().toISOString().split('T')[0]}.html`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `${type}_dashboard_export_${new Date().toISOString().split('T')[0]}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
+
 }
 
 // Instantiate App
