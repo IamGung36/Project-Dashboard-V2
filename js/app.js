@@ -3365,295 +3365,163 @@ class DashboardApp {
 
   exportDashboardHTML(type) {
     const isPortfolio = type === 'portfolio';
-    const title = isPortfolio ? 'Portfolio (Awarded Projects)' : 'Project Overview (Underdevelopment)';
+    const title    = isPortfolio ? 'Portfolio (Awarded Projects)' : 'Project Overview (Underdevelopment)';
     const subtitle = isPortfolio
       ? 'Summary of renewable energy projects with active construction contracts'
       : 'Dashboard and metrics for pipeline projects in development stage';
     const projects = isPortfolio ? this.getFilteredAwardedProjects() : this.getFilteredPipelineProjects();
 
-    // Get regional table HTML
-    const tableBodyEl = document.getElementById(isPortfolio ? 'portfolio-region-table-body' : 'overview-region-table-body');
-    const tableHtml = tableBodyEl ? tableBodyEl.innerHTML : '';
+    // 1. Capture existing Chart.js canvas as a PNG data URL
+    const chartCanvasId = isPortfolio ? 'portfolio-system-chart' : 'overview-system-chart';
+    const chartCanvas   = document.getElementById(chartCanvasId);
+    const chartDataUrl  = (chartCanvas && chartCanvas.width > 0) ? chartCanvas.toDataURL('image/png') : '';
 
-    // Get system details HTML
-    const detailsEl = document.getElementById(isPortfolio ? 'portfolio-system-details' : 'overview-system-details');
-    const detailsHtml = detailsEl ? detailsEl.innerHTML : '';
-
-    // Get KPI summary cards HTML
-    const kpiEl = document.getElementById(isPortfolio ? 'awarded-pipeline-summary-cards' : 'pipeline-summary-cards');
-    const kpiHtml = kpiEl ? kpiEl.innerHTML : '';
-
-    // Get project list table HTML
-    const listTableEl = document.getElementById(isPortfolio ? 'awarded-pipeline-table-body' : 'pipeline-table-body');
-    const listTableHtml = listTableEl ? listTableEl.innerHTML : '';
-
-    const listTitle = isPortfolio ? 'Project Awarded' : 'Project Pipeline';
-    const listDesc = isPortfolio
+    // 2. Capture DOM snapshots
+    const tableBodyEl   = document.getElementById(isPortfolio ? 'portfolio-region-table-body'   : 'overview-region-table-body');
+    const tableHtml     = tableBodyEl   ? tableBodyEl.innerHTML   : '';
+    const detailsEl     = document.getElementById(isPortfolio ? 'portfolio-system-details'       : 'overview-system-details');
+    const detailsHtml   = detailsEl    ? detailsEl.innerHTML     : '';
+    const kpiEl         = document.getElementById(isPortfolio ? 'awarded-pipeline-summary-cards' : 'pipeline-summary-cards');
+    const kpiHtml       = kpiEl        ? kpiEl.innerHTML         : '';
+    const listTableEl   = document.getElementById(isPortfolio ? 'awarded-pipeline-table-body'   : 'pipeline-table-body');
+    const listTableHtml = listTableEl  ? listTableEl.innerHTML   : '';
+    const listTitle     = isPortfolio ? 'Project Awarded' : 'Project Pipeline';
+    const listDesc      = isPortfolio
       ? 'Consolidated database table listing all awarded projects with geographic coordinate links'
       : 'Consolidated database table listing all projects with geographic coordinate links';
 
-    // Theme
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const bgTheme     = isDark ? '#0b1610'                : '#f8fafc';
-    const cardBg      = isDark ? 'rgba(17,34,24,0.45)'   : 'rgba(255,255,255,0.45)';
-    const cardBorder  = isDark ? 'rgba(26,51,36,0.8)'    : 'rgba(2,87,37,0.08)';
-    const textColor   = isDark ? '#e2ece6'                : '#1f2937';
-    const textMuted   = isDark ? '#8ca395'                : '#6b7280';
-    const primaryColor = '#025725';
+    // 3. Theme
+    const isDark       = document.documentElement.getAttribute('data-theme') === 'dark';
+    const bg           = isDark ? '#0b1610'             : '#f8fafc';
+    const cardBg       = isDark ? 'rgba(17,34,24,0.7)' : 'rgba(255,255,255,0.95)';
+    const cardBdr      = isDark ? 'rgba(26,51,36,0.8)' : 'rgba(2,87,37,0.12)';
+    const clrText      = isDark ? '#e2ece6'             : '#1f2937';
+    const clrMuted     = isDark ? '#8ca395'             : '#6b7280';
+    const clrPrimary   = '#025725';
     const pinColor     = isPortfolio ? '#025725' : '#ea580c';
+    const themeAttr    = isDark ? 'dark' : 'light';
 
-    // Map markers
-    const markersData = projects
+    // 4. Map markers
+    const markersData  = projects
       .map(p => ({ name: p.name, code: p.code, lat: p.lat, lng: p.lng, capacity: p.capacity }))
-      .filter(m => m.lat !== null && m.lng !== null && m.lat !== undefined && m.lng !== undefined);
+      .filter(m => m.lat != null && m.lng != null && !isNaN(m.lat) && !isNaN(m.lng));
+    const markersJson  = JSON.stringify(markersData);
+    const iconUrl      = isPortfolio
+      ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png'
+      : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png';
 
-    // Chart data
-    const systemTotals = { Rooftop: 0, Farm: 0, Floating: 0, Carpark: 0, BESS: 0 };
-    projects.forEach(p => {
-      if (p.systems) {
-        Object.entries(p.systems).forEach(([k, v]) => {
-          if (systemTotals[k] !== undefined) systemTotals[k] += v;
-        });
-      }
-    });
-    const chartLabels = ['Rooftop', 'Farm', 'Floating', 'Carpark', 'BESS'];
-    const chartData   = [systemTotals.Rooftop, systemTotals.Farm, systemTotals.Floating, systemTotals.Carpark, systemTotals.BESS];
-    const chartColors = ['#10b981', '#0ea5e9', '#06b6d4', '#f97316', '#ef4444'];
-    const totalMW     = chartData.reduce((a, b) => a + b, 0);
-
-    const htmlContent = `<!DOCTYPE html>
-<html lang="en" data-theme="${isDark ? 'dark' : 'light'}">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${title}</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<style>
-*{box-sizing:border-box;}
-body{font-family:'Inter',sans-serif;background:${bgTheme};color:${textColor};padding:24px;margin:0;}
-h1,h2,h3,h4,h5,h6{font-family:'Outfit',sans-serif;}
-.glass-card{background:${cardBg};border:1px solid ${cardBorder};border-radius:16px;padding:20px;box-shadow:0 4px 24px rgba(0,0,0,0.06);}
-#map{width:100%;height:480px;border-radius:12px;border:1px solid ${cardBorder};display:block;}
-#chart-wrap{position:relative;width:240px;height:240px;margin:0 auto 16px;}
-#doughnutChart{display:block;}
-.pipeline-card{border:1px solid ${cardBorder};border-radius:12px;padding:14px;display:flex;flex-direction:column;min-height:90px;}
-.pipeline-card-title{font-size:11px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:5px;font-family:'Outfit',sans-serif;text-transform:uppercase;letter-spacing:0.5px;}
-.pipeline-card-value{font-size:17px;font-weight:800;font-family:'Outfit',sans-serif;line-height:1.2;}
-.pipeline-card-subtext{font-size:11px;margin-top:4px;font-weight:500;}
-[data-theme="light"] .pipeline-card-total{background:#eff6ff;color:#1e40af;border-color:#bfdbfe;}
-[data-theme="light"] .pipeline-card-rooftop{background:#fff7ed;color:#c2410c;border-color:#fed7aa;}
-[data-theme="light"] .pipeline-card-farm{background:#f0fdf4;color:#15803d;border-color:#bbf7d0;}
-[data-theme="light"] .pipeline-card-float{background:#ecfeff;color:#0e7490;border-color:#cffafe;}
-[data-theme="light"] .pipeline-card-carpark{background:#f8fafc;color:#475569;border-color:#e2e8f0;}
-[data-theme="light"] .pipeline-card-bess{background:#faf5ff;color:#6b21a8;border-color:#e9d5ff;}
-[data-theme="dark"] .pipeline-card-total{background:rgba(30,64,175,.25);color:#93c5fd;border-color:rgba(147,197,253,.3);}
-[data-theme="dark"] .pipeline-card-rooftop{background:rgba(194,65,12,.25);color:#fdba74;border-color:rgba(253,186,116,.3);}
-[data-theme="dark"] .pipeline-card-farm{background:rgba(21,128,61,.25);color:#86efac;border-color:rgba(134,239,172,.3);}
-[data-theme="dark"] .pipeline-card-float{background:rgba(14,116,144,.25);color:#67e8f9;border-color:rgba(103,232,249,.3);}
-[data-theme="dark"] .pipeline-card-carpark{background:rgba(71,85,105,.25);color:#cbd5e1;border-color:rgba(203,213,225,.3);}
-[data-theme="dark"] .pipeline-card-bess{background:rgba(107,33,168,.25);color:#d8b4fe;border-color:rgba(216,180,254,.3);}
-.tbl th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:${primaryColor};border-bottom:2px solid ${cardBorder};background:transparent;}
-.tbl td{border-bottom:1px solid ${cardBorder};font-size:12px;color:${textColor};}
-.project-list-table th:last-child,.project-list-table td:last-child{display:none!important;}
-.footer{margin-top:32px;font-size:11px;color:${textMuted};text-align:center;border-top:1px solid ${cardBorder};padding-top:16px;}
-.badge{font-weight:600;padding:3px 8px;border-radius:6px;display:inline-block;font-size:11px;}
-.bg-success{background-color:${primaryColor}!important;}
-.bg-warning{background-color:#f59e0b!important;}
-.bg-secondary{background-color:${textMuted}!important;}
-.text-dark{color:#111!important;}
-.progress{background:${cardBorder};border-radius:4px;overflow:hidden;height:8px;display:flex;}
-</style>
-</head>
-<body>
-<div class="container-fluid">
-
-  <!-- Header -->
-  <div class="d-flex justify-content-between align-items-start mb-4">
-    <div>
-      <h1 style="font-weight:800;font-size:26px;color:${primaryColor};">${title}</h1>
-      <p style="color:${textMuted};font-size:13px;margin:0;">${subtitle}<br><small>Generated: ${new Date().toLocaleString()}</small></p>
-    </div>
-  </div>
-
-  <!-- Dashboard Row -->
-  <div class="row g-4 mb-5">
-
-    <!-- Map -->
-    <div class="col-lg-8">
-      <div class="glass-card h-100">
-        <h6 style="font-weight:700;color:${primaryColor};margin-bottom:14px;">
-          <i class="fas fa-map-marked-alt me-2"></i>Project Coordinates on Thailand Map
-        </h6>
-        <div id="map"></div>
-      </div>
-    </div>
-
-    <!-- Right Column -->
-    <div class="col-lg-4">
-      <!-- Donut Chart -->
-      <div class="glass-card mb-4">
-        <h6 style="font-weight:700;color:${primaryColor};margin-bottom:14px;">
-          <i class="fas fa-chart-pie me-2"></i>Portfolio (MWp)
-        </h6>
-        <div id="chart-wrap">
-          <canvas id="doughnutChart" width="240" height="240"></canvas>
-        </div>
-        <div>${detailsHtml}</div>
-      </div>
-
-      <!-- Regional Table -->
-      <div class="glass-card">
-        <h6 style="font-weight:700;color:${primaryColor};margin-bottom:14px;">
-          <i class="fas fa-table me-2"></i>Solar Capacity by Region (MWp)
-        </h6>
-        <div class="table-responsive">
-          <table class="table table-sm text-center align-middle mb-0 tbl">
-            <thead>
-              <tr>
-                <th class="text-start">System</th>
-                <th>Central</th><th>North</th><th>South</th>
-                <th>NE</th><th>East</th><th>West</th>
-              </tr>
-            </thead>
-            <tbody>${tableHtml}</tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Project List -->
-  <div class="glass-card">
-    <h4 style="font-weight:800;color:${primaryColor};">${listTitle}</h4>
-    <p style="color:${textMuted};font-size:12px;">${listDesc}</p>
-    <div class="row g-3 mb-4">${kpiHtml}</div>
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0 tbl project-list-table" style="font-size:12px;">
-        <thead class="table-success">
-          <tr>
-            <th>Code</th><th>Project Name</th><th>Region</th><th>Engineer</th>
-            <th>Investor</th><th>Type</th><th>Client</th><th>Systems</th>
-            <th class="text-end">Capacity</th><th>Location</th>
-            <th class="text-center">Due Date</th><th class="text-center">Status</th>
-            <th class="text-center">Stage</th><th class="text-center">Checklist</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>${listTableHtml}</tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="footer">Generated by Project Dashboard &copy; 2026</div>
-</div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>
-<script>
-(function(){
-  var MARKERS  = ${JSON.stringify(markersData)};
-  var C_LABELS = ${JSON.stringify(chartLabels)};
-  var C_DATA   = ${JSON.stringify(chartData)};
-  var C_COLORS = ${JSON.stringify(chartColors)};
-  var TOTAL_MW = ${JSON.stringify(totalMW)};
-  var N_PROJ   = ${projects.length};
-  var PIN_COLOR = '${pinColor}';
-  var IS_DARK   = ${isDark};
-
-  /* ---- MAP ---- */
-  var mapEl = document.getElementById('map');
-  if (mapEl && typeof L !== 'undefined') {
-    var map = L.map('map', { scrollWheelZoom: false });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
-      attribution:'&copy; OSM contributors &copy; CARTO'
-    }).addTo(map);
-
-    function pinSvg(color){
-      var c = encodeURIComponent(color);
-      return 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32"><path fill="'+c+'" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>';
-    }
-
-    var bounds = [];
-    MARKERS.forEach(function(m){
-      var icon = L.icon({ iconUrl: pinSvg(PIN_COLOR), iconSize:[32,32], iconAnchor:[16,32], popupAnchor:[0,-30] });
-      var popup = '<b style="color:'+PIN_COLOR+'">'+m.code+'</b><br>'+m.name+'<br>'+parseFloat(m.capacity).toFixed(2)+' MWp';
-      L.marker([m.lat, m.lng], {icon:icon}).addTo(map).bindPopup(popup);
-      bounds.push([m.lat, m.lng]);
-    });
-
-    if (bounds.length > 0) {
-      map.fitBounds(bounds, {padding:[40,40]});
+    // 5. Build HTML via array push to avoid any escaping issues
+    const H = [];
+    H.push('<!DOCTYPE html>');
+    H.push('<html lang="en" data-theme="' + themeAttr + '">');
+    H.push('<head>');
+    H.push('<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">');
+    H.push('<title>' + title + '</title>');
+    H.push('<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">');
+    H.push('<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">');
+    H.push('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">');
+    H.push('<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">');
+    H.push('<style>');
+    H.push('*{box-sizing:border-box}body{font-family:Inter,sans-serif;background:' + bg + ';color:' + clrText + ';padding:24px;margin:0}h1,h2,h3,h4,h5,h6{font-family:Outfit,sans-serif}');
+    H.push('.glass{background:' + cardBg + ';border:1px solid ' + cardBdr + ';border-radius:16px;padding:20px;box-shadow:0 4px 20px rgba(0,0,0,.07)}');
+    H.push('#map{height:480px;width:100%;border-radius:12px;overflow:hidden;display:block}');
+    H.push('.chart-img{width:220px;height:220px;display:block;margin:0 auto 12px;object-fit:contain}');
+    H.push('.tbl th{font-size:11px;font-weight:700;text-transform:uppercase;color:' + clrPrimary + ';border-bottom:2px solid ' + cardBdr + ';background:transparent;padding:6px 8px}');
+    H.push('.tbl td{border-bottom:1px solid ' + cardBdr + ';font-size:12px;color:' + clrText + ';padding:6px 8px}.tbl tr:hover td{background:rgba(2,87,37,.03)}');
+    H.push('.project-list-table th:last-child,.project-list-table td:last-child{display:none!important}');
+    H.push('.pipeline-card{border:1px solid ' + cardBdr + ';border-radius:12px;padding:14px;min-height:90px}');
+    H.push('.pipeline-card-title{font-size:11px;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;font-family:Outfit,sans-serif;display:flex;align-items:center;gap:5px}');
+    H.push('.pipeline-card-value{font-size:17px;font-weight:800;font-family:Outfit,sans-serif}.pipeline-card-subtext{font-size:11px;margin-top:4px}');
+    H.push('[data-theme=light] .pipeline-card-total{background:#eff6ff;color:#1e40af;border-color:#bfdbfe}');
+    H.push('[data-theme=light] .pipeline-card-rooftop{background:#fff7ed;color:#c2410c;border-color:#fed7aa}');
+    H.push('[data-theme=light] .pipeline-card-farm{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}');
+    H.push('[data-theme=light] .pipeline-card-float{background:#ecfeff;color:#0e7490;border-color:#cffafe}');
+    H.push('[data-theme=light] .pipeline-card-carpark{background:#f8fafc;color:#475569;border-color:#e2e8f0}');
+    H.push('[data-theme=light] .pipeline-card-bess{background:#faf5ff;color:#6b21a8;border-color:#e9d5ff}');
+    H.push('[data-theme=dark] .pipeline-card-total{background:rgba(30,64,175,.25);color:#93c5fd;border-color:rgba(147,197,253,.3)}');
+    H.push('[data-theme=dark] .pipeline-card-rooftop{background:rgba(194,65,12,.25);color:#fdba74;border-color:rgba(253,186,116,.3)}');
+    H.push('[data-theme=dark] .pipeline-card-farm{background:rgba(21,128,61,.25);color:#86efac;border-color:rgba(134,239,172,.3)}');
+    H.push('[data-theme=dark] .pipeline-card-float{background:rgba(14,116,144,.25);color:#67e8f9;border-color:rgba(103,232,249,.3)}');
+    H.push('[data-theme=dark] .pipeline-card-carpark{background:rgba(71,85,105,.25);color:#cbd5e1;border-color:rgba(203,213,225,.3)}');
+    H.push('[data-theme=dark] .pipeline-card-bess{background:rgba(107,33,168,.25);color:#d8b4fe;border-color:rgba(216,180,254,.3)}');
+    H.push('.badge{font-weight:600;padding:3px 8px;border-radius:6px;display:inline-block;font-size:11px}');
+    H.push('.bg-success{background-color:' + clrPrimary + '!important;color:#fff!important}.bg-warning{background-color:#f59e0b!important}.bg-secondary{background-color:' + clrMuted + '!important;color:#fff!important}');
+    H.push('.text-dark{color:#111!important}.progress{background:' + cardBdr + ';border-radius:4px;overflow:hidden;height:8px;display:flex}');
+    H.push('.footer{margin-top:32px;padding-top:16px;border-top:1px solid ' + cardBdr + ';text-align:center;font-size:11px;color:' + clrMuted + '}');
+    H.push('</style></head><body>');
+    H.push('<div class="container-fluid">');
+    H.push('<div class="d-flex align-items-start mb-4"><div>');
+    H.push('<h1 style="font-size:26px;font-weight:800;color:' + clrPrimary + ';">' + title + '</h1>');
+    H.push('<p style="color:' + clrMuted + ';font-size:13px;margin:0;">' + subtitle + '<br><small>Generated: ' + new Date().toLocaleString() + '</small></p>');
+    H.push('</div></div>');
+    H.push('<div class="row g-4 mb-5">');
+    H.push('<div class="col-lg-8"><div class="glass h-100">');
+    H.push('<h6 style="font-weight:700;color:' + clrPrimary + ';margin-bottom:14px;"><i class="fas fa-map-marked-alt me-2"></i>Project Coordinates on Thailand Map</h6>');
+    H.push('<div id="map" style="height:480px;width:100%;border-radius:12px;"></div>');
+    H.push('</div></div>');
+    H.push('<div class="col-lg-4">');
+    H.push('<div class="glass mb-4">');
+    H.push('<h6 style="font-weight:700;color:' + clrPrimary + ';margin-bottom:14px;"><i class="fas fa-chart-pie me-2"></i>Portfolio (MWp)</h6>');
+    if (chartDataUrl) {
+      H.push('<img class="chart-img" src="' + chartDataUrl + '" alt="Portfolio Chart">');
     } else {
-      map.setView([13.74, 100.52], 6);
+      H.push('<p style="text-align:center;padding:40px 0;color:' + clrMuted + ';">Chart not available</p>');
     }
+    H.push('<div>' + detailsHtml + '</div></div>');
+    H.push('<div class="glass">');
+    H.push('<h6 style="font-weight:700;color:' + clrPrimary + ';margin-bottom:14px;"><i class="fas fa-table me-2"></i>Solar Capacity by Region (MWp)</h6>');
+    H.push('<div class="table-responsive"><table class="table table-sm text-center align-middle mb-0 tbl">');
+    H.push('<thead><tr><th class="text-start">System</th><th>Central</th><th>North</th><th>South</th><th>NE</th><th>East</th><th>West</th></tr></thead>');
+    H.push('<tbody>' + tableHtml + '</tbody></table></div></div>');
+    H.push('</div></div>');
+    H.push('<div class="glass">');
+    H.push('<h4 style="font-weight:800;color:' + clrPrimary + ';">' + listTitle + '</h4>');
+    H.push('<p style="color:' + clrMuted + ';font-size:12px;">' + listDesc + '</p>');
+    H.push('<div class="row g-3 mb-4">' + kpiHtml + '</div>');
+    H.push('<div class="table-responsive"><table class="table table-hover align-middle mb-0 tbl project-list-table" style="font-size:12px;">');
+    H.push('<thead class="table-success"><tr>');
+    H.push('<th>Code</th><th>Project Name</th><th>Region</th><th>Engineer</th><th>Investor</th><th>Type</th><th>Client</th><th>Systems</th>');
+    H.push('<th class="text-end">Capacity</th><th>Location</th><th class="text-center">Due Date</th><th class="text-center">Status</th>');
+    H.push('<th class="text-center">Stage</th><th class="text-center">Checklist</th><th>Action</th>');
+    H.push('</tr></thead><tbody>' + listTableHtml + '</tbody></table></div></div>');
+    H.push('<div class="footer">Generated by Project Dashboard &copy; 2026</div>');
+    H.push('</div>');
 
-    setTimeout(function(){ map.invalidateSize(); }, 300);
-  }
+    // Map script - use string split to avoid </script> in JS source
+    var leafletSrc = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    H.push(['<scr', 'ipt src="' + leafletSrc + '"></sc', 'ript>'].join(''));
+    // Build map init code as a plain JS string (no template literals needed)
+    var mapCode = '(function(){' +
+      'var M=' + markersJson + ';' +
+      'var iconUrl="' + iconUrl + '";' +
+      'var pinHex="' + pinColor + '";' +
+      'function go(){' +
+        'if(typeof L==="undefined"){setTimeout(go,300);return;}' +
+        'var map=L.map("map",{scrollWheelZoom:true});' +
+        'L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:"\u00a9 OSM \u00a9 CARTO"}).addTo(map);' +
+        'var ic=L.icon({iconUrl:iconUrl,iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34]});' +
+        'var bds=[];' +
+        'M.forEach(function(p){' +
+          'var pop="<b style=\"color:"+pinHex+"\">"+p.code+"</b><br>"+p.name+"<br>"+parseFloat(p.capacity).toFixed(2)+" MWp";' +
+          'L.marker([p.lat,p.lng],{icon:ic}).addTo(map).bindPopup(pop);' +
+          'bds.push([p.lat,p.lng]);' +
+        '});' +
+        'if(bds.length){map.fitBounds(bds,{padding:[50,50]});}else{map.setView([13.74,100.52],6);}' +
+        'function rz(){map.invalidateSize();}' +
+        'setTimeout(rz,150);setTimeout(rz,600);setTimeout(rz,1800);' +
+      '}' +
+      'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){setTimeout(go,150);});}' +
+      'else{setTimeout(go,150);}' +
+    '})();';
+    H.push(['<scr', 'ipt>', mapCode, '</sc', 'ript>'].join(''));
+    H.push('</body></html>');
 
-  /* ---- CHART ---- */
-  var canvas = document.getElementById('doughnutChart');
-  if (canvas && typeof Chart !== 'undefined') {
-    var ctx = canvas.getContext('2d');
-    new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: C_LABELS,
-        datasets: [{
-          data: C_DATA,
-          backgroundColor: C_COLORS,
-          borderColor: 'transparent',
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: false,
-        animation: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: function(ctx){ return ' '+ctx.label+': '+parseFloat(ctx.raw).toFixed(2)+' MWp'; }
-            }
-          }
-        },
-        cutout: '58%'
-      },
-      plugins: [{
-        id: 'center',
-        afterDraw: function(chart){
-          var c = chart.ctx, w = chart.width, h = chart.height;
-          c.save();
-          c.textAlign = 'center';
-          c.textBaseline = 'middle';
-
-          c.font = 'bold 15px Outfit,sans-serif';
-          c.fillStyle = IS_DARK ? '#e2ece6' : '#0d1a12';
-          c.fillText(TOTAL_MW.toFixed(1)+' MWp', w/2, h/2 - 10);
-
-          c.font = 'bold 10px Inter,sans-serif';
-          c.fillStyle = IS_DARK ? '#8ca395' : '#536b5c';
-          c.fillText('TOTAL', w/2, h/2 + 8);
-
-          c.font = 'bold 10px Inter,sans-serif';
-          c.fillText(N_PROJ+' '+(N_PROJ===1?'Project':'Projects'), w/2, h/2 + 22);
-          c.restore();
-        }
-      }]
-    });
-  }
-})();
-<\/script>
-</body>
-</html>`;
-
+    const htmlContent = H.join('\n');
     const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = `${type}_dashboard_export_${new Date().toISOString().split('T')[0]}.html`;
+    a.download = type + '_dashboard_export_' + new Date().toISOString().split('T')[0] + '.html';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
