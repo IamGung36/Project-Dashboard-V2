@@ -3721,13 +3721,13 @@ class DashboardApp {
 
       L.marker([m.lat, m.lng], { icon: icon })
         .addTo(map)
-        .bindPopup(`
-          <div style="font-family: 'Inter', sans-serif; font-size: 12px; line-height: 1.4;">
-            <b style="color: \${pinColor}; font-size: 13px;">\${m.code}</b><br>
-            <b>\${m.name}</b><br>
-            Capacity: \${parseFloat(m.capacity).toFixed(2)} MWp
-          </div>
-        `);
+        .bindPopup(
+          "<div style='font-family: \"Inter\", sans-serif; font-size: 12px; line-height: 1.4;'>" +
+            "<b style='color: " + pinColor + "; font-size: 13px;'>" + m.code + "</b><br>" +
+            "<b>" + m.name + "</b><br>" +
+            "Capacity: " + parseFloat(m.capacity).toFixed(2) + " MWp" +
+          "</div>"
+        );
     });
 
     if (markers.length > 0) {
@@ -3765,7 +3765,7 @@ class DashboardApp {
           tooltip: {
             callbacks: {
               label: function(context) {
-                return ` \${context.label}: \${parseFloat(context.raw).toFixed(2)} MWp`;
+                return " " + context.label + ": " + parseFloat(context.raw).toFixed(2) + " MWp";
               }
             }
           }
@@ -3823,7 +3823,16 @@ class DashboardApp {
 </html>
     `;
 
-}
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${type}_dashboard_export_${new Date().toISOString().split('T')[0]}.html`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
 
 // Instantiate App
 window.app = new DashboardApp();
