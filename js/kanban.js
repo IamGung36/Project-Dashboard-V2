@@ -65,15 +65,20 @@ class KanbanBoard {
         // Build list of system badges with capacity
         let systemsBadgesHtml = '';
         if (proj.systems) {
-          Object.entries(proj.systems).forEach(([sysName, cap]) => {
-            if (cap > 0) {
+          Object.entries(proj.systems).forEach(([sysName, rawCap]) => {
+            const entry = window.parseSystemEntry ? window.parseSystemEntry(sysName, rawCap) : { value: parseFloat(rawCap) || 0, unit: 'MW', isCustomUnit: false };
+            if (entry.value > 0) {
               let sysBadgeClass = 'bg-success';
               if (sysName === 'Farm') sysBadgeClass = 'bg-warning text-dark';
               else if (sysName === 'Floating') sysBadgeClass = 'bg-info text-dark';
               else if (sysName === 'Carpark') sysBadgeClass = 'bg-secondary';
               else if (sysName === 'BESS') sysBadgeClass = 'bg-danger';
-              
-              systemsBadgesHtml += `<span class="badge ${sysBadgeClass} me-1 mb-1" style="font-size: 9px;">${sysName}: ${parseFloat(cap).toFixed(1)}M</span>`;
+              else if (entry.isCustomUnit) sysBadgeClass = 'bg-primary';
+
+              const labelVal = entry.isCustomUnit && entry.unit.toUpperCase() !== 'MW' && entry.unit.toUpperCase() !== 'MWP'
+                ? `${entry.value} ${entry.unit}`
+                : `${entry.value.toFixed(1)}M`;
+              systemsBadgesHtml += `<span class="badge ${sysBadgeClass} me-1 mb-1" style="font-size: 9px;">${sysName}: ${labelVal}</span>`;
             }
           });
         }

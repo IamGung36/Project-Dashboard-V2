@@ -35,6 +35,46 @@ function stableStringify(obj) {
   return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify(obj[k])).join(',') + '}';
 }
 
+// Global system entry parser & capacity helpers (supports standard MW and custom units)
+window.parseSystemEntry = function(sysName, rawVal) {
+  if (rawVal && typeof rawVal === 'object') {
+    const val = parseFloat(rawVal.value) || 0;
+    const unit = String(rawVal.unit || 'MW').trim() || 'MW';
+    const upper = unit.toUpperCase();
+    const isSolarMW = (upper === 'MW' || upper === 'MWP') && sysName !== 'BESS';
+    const isSolarKWp = upper === 'KWP';
+    return {
+      value: val,
+      unit: unit,
+      isCustomUnit: true,
+      solarMW: isSolarMW ? val : (isSolarKWp ? val / 1000 : 0)
+    };
+  }
+  const val = parseFloat(rawVal) || 0;
+  const isBess = sysName === 'BESS';
+  return {
+    value: val,
+    unit: isBess ? 'MWh' : 'MW',
+    isCustomUnit: false,
+    solarMW: isBess ? 0 : val
+  };
+};
+
+window.formatSystemBadgeText = function(sysName, rawVal) {
+  const entry = window.parseSystemEntry(sysName, rawVal);
+  if (entry.isCustomUnit) {
+    const uUpper = entry.unit.toUpperCase();
+    if (uUpper === 'MW' || uUpper === 'MWP') {
+      return `${sysName} (${(entry.value * 1000).toLocaleString(undefined, { maximumFractionDigits: 2 })} kWp)`;
+    }
+    return `${sysName} (${entry.value.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${entry.unit})`;
+  }
+  if (sysName === 'BESS') {
+    return `${sysName} (${(entry.value * 1000).toFixed(0)} kWh)`;
+  }
+  return `${sysName} (${(entry.value * 1000).toFixed(0)} kWp)`;
+};
+
 class LocalDatabase {
   constructor() {
     this.data = null;
@@ -162,11 +202,10 @@ class LocalDatabase {
       if (p.stage === 'Cancle') p.stage = 'Cancel';
       if (p.businessType === 'Treading') p.businessType = 'Trading';
 
-      // 5. Solar capacity excluding BESS
+      // 5. Solar capacity excluding BESS & non-MW custom-unit systems
       const sysObj = p.systems || {};
       const solarCapacity = Object.entries(sysObj)
-        .filter(([sys]) => sys !== 'BESS')
-        .reduce((sum, [_, cap]) => sum + (parseFloat(cap) || 0), 0);
+        .reduce((sum, [sys, raw]) => sum + window.parseSystemEntry(sys, raw).solarMW, 0);
       p.capacity = solarCapacity;
 
       // 6. Coordinates
@@ -511,8 +550,7 @@ class LocalDatabase {
 
     const sysObj = project.systems || {};
     const totalCapacity = Object.entries(sysObj)
-      .filter(([sys]) => sys !== 'BESS')
-      .reduce((sum, [_, cap]) => sum + (parseFloat(cap) || 0), 0);
+      .reduce((sum, [sys, raw]) => sum + window.parseSystemEntry(sys, raw).solarMW, 0);
 
     const newProject = {
       id: newId,
@@ -579,8 +617,7 @@ class LocalDatabase {
 
     const sysObj = updatedData.systems || currentProject.systems || {};
     const totalCapacity = Object.entries(sysObj)
-      .filter(([sys]) => sys !== 'BESS')
-      .reduce((sum, [_, cap]) => sum + (parseFloat(cap) || 0), 0);
+      .reduce((sum, [sys, raw]) => sum + window.parseSystemEntry(sys, raw).solarMW, 0);
 
     const updatedProject = {
       ...currentProject,
@@ -914,7 +951,7 @@ window.db = db;
 // Global capacity formatting helpers
 window.formatProjectCapacityRow = function(p) {
   let parts = [];
-  const solarCap = p.capacity || 0; // already excludes BESS
+  const solarCap = p.capacity || 0; // already excludes BESS & non-MW custom systems
   if (solarCap > 0) {
     parts.push(`${(solarCap * 1000).toLocaleString(undefined, {maximumFractionDigits: 0})} kWp`);
   }
@@ -922,18 +959,34 @@ window.formatProjectCapacityRow = function(p) {
     const bessCap = parseFloat(p.systems.BESS);
     parts.push(`${(bessCap * 1000).toLocaleString(undefined, {maximumFractionDigits: 0})} kWh`);
   }
+  if (p.systems) {
+    Object.entries(p.systems).forEach(([sys, raw]) => {
+      const entry = window.parseSystemEntry(sys, raw);
+      if (entry.isCustomUnit && entry.solarMW === 0 && entry.value > 0) {
+        parts.push(`${entry.value.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${entry.unit}`);
+      }
+    });
+  }
   return parts.length > 0 ? parts.join(' + ') : '0 kWp';
 };
 
 window.formatProjectCapacityMW = function(p) {
   let parts = [];
-  const solarCap = p.capacity || 0; // already excludes BESS
+  const solarCap = p.capacity || 0;
   if (solarCap > 0) {
     parts.push(`${solarCap.toFixed(1)} MW`);
   }
   if (p.systems && p.systems.BESS && parseFloat(p.systems.BESS) > 0) {
     const bessCap = parseFloat(p.systems.BESS);
     parts.push(`${bessCap.toFixed(1)} MW (BESS)`);
+  }
+  if (parts.length === 0 && p.systems) {
+    Object.entries(p.systems).forEach(([sys, raw]) => {
+      const entry = window.parseSystemEntry(sys, raw);
+      if (entry.isCustomUnit && entry.value > 0) {
+        parts.push(`${entry.value.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${entry.unit}`);
+      }
+    });
   }
   return parts.length > 0 ? parts.join(' + ') : '0.0 MW';
 };

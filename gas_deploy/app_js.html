@@ -297,21 +297,35 @@ class DashboardApp {
     // Custom Installation System type buttons
     const addProjSysBtn = document.getElementById('add-project-new-system-btn');
     if (addProjSysBtn) {
-      addProjSysBtn.addEventListener('click', () => {
-        const sysName = prompt('Enter System Type Name:');
-        if (sysName && sysName.trim()) {
-          this.appendCustomSystemItem('add-project-systems-container', sysName.trim());
-        }
-      });
+      addProjSysBtn.addEventListener('click', () => this.openAddCustomSystemModal('add-project-systems-container'));
     }
 
     const editProjSysBtn = document.getElementById('edit-project-new-system-btn');
     if (editProjSysBtn) {
-      editProjSysBtn.addEventListener('click', () => {
-        const sysName = prompt('Enter System Type Name:');
-        if (sysName && sysName.trim()) {
-          this.appendCustomSystemItem('edit-project-systems-container', sysName.trim());
-        }
+      editProjSysBtn.addEventListener('click', () => this.openAddCustomSystemModal('edit-project-systems-container'));
+    }
+
+    document.querySelectorAll('.custom-unit-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const unitInp = document.getElementById('custom-system-unit-input');
+        if (unitInp) unitInp.value = chip.getAttribute('data-unit') || 'งาน';
+      });
+    });
+
+    const customSysForm = document.getElementById('add-custom-system-form');
+    if (customSysForm) {
+      customSysForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const nameInp = document.getElementById('custom-system-name-input');
+        const unitInp = document.getElementById('custom-system-unit-input');
+        const sysName = nameInp ? nameInp.value.trim() : '';
+        const sysUnit = unitInp ? unitInp.value.trim() : 'งาน';
+        if (!sysName || !this._customSystemTargetContainer) return;
+
+        this.appendCustomSystemItem(this._customSystemTargetContainer, sysName, { value: '', unit: sysUnit || 'งาน' }, sysUnit || 'งาน');
+        const modalEl = document.getElementById('addCustomSystemModal');
+        const modalInst = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
+        if (modalInst) modalInst.hide();
       });
     }
 
@@ -401,9 +415,10 @@ class DashboardApp {
     const filterRegion = document.getElementById('pipeline-filter-region');
     const filterInvestor = document.getElementById('pipeline-filter-investor');
     const filterBusiness = document.getElementById('pipeline-filter-business');
+    const filterSystem = document.getElementById('pipeline-filter-system');
     const sortSelect = document.getElementById('pipeline-sort');
     
-    [searchInput, filterRegion, filterInvestor, filterBusiness, sortSelect].forEach(el => {
+    [searchInput, filterRegion, filterInvestor, filterBusiness, filterSystem, sortSelect].forEach(el => {
       if (el) {
         el.addEventListener('input', () => this.renderPipelineTable());
         el.addEventListener('change', () => this.renderPipelineTable());
@@ -415,9 +430,10 @@ class DashboardApp {
     const filterRegionAwarded = document.getElementById('awarded-pipeline-filter-region');
     const filterInvestorAwarded = document.getElementById('awarded-pipeline-filter-investor');
     const filterBusinessAwarded = document.getElementById('awarded-pipeline-filter-business');
+    const filterSystemAwarded = document.getElementById('awarded-pipeline-filter-system');
     const sortSelectAwarded = document.getElementById('awarded-pipeline-sort');
     
-    [searchInputAwarded, filterRegionAwarded, filterInvestorAwarded, filterBusinessAwarded, sortSelectAwarded].forEach(el => {
+    [searchInputAwarded, filterRegionAwarded, filterInvestorAwarded, filterBusinessAwarded, filterSystemAwarded, sortSelectAwarded].forEach(el => {
       if (el) {
         el.addEventListener('input', () => this.renderAwardedPipelineTable());
         el.addEventListener('change', () => this.renderAwardedPipelineTable());
@@ -804,6 +820,7 @@ class DashboardApp {
   // Refresh all views
   updateViews() {
     this.populateMemberDropdowns();
+    this.populateSystemFilterDropdowns();
     this.renderPortfolioCharts();
     this.renderOverviewCharts();
     this.renderPipelineTable();
@@ -1111,10 +1128,11 @@ class DashboardApp {
       let solarCapacityMW = 0;
       let activeSolarTypes = [];
       if (p.systems) {
-        Object.entries(p.systems).forEach(([sysName, cap]) => {
-          if (sysName !== 'BESS' && cap > 0) {
-            solarCapacityMW += parseFloat(cap);
-            activeSolarTypes.push(sysName);
+        Object.entries(p.systems).forEach(([sysName, rawCap]) => {
+          const entry = window.parseSystemEntry(sysName, rawCap);
+          if (sysName !== 'BESS' && entry.value > 0) {
+            solarCapacityMW += entry.solarMW;
+            activeSolarTypes.push(entry.isCustomUnit && entry.solarMW === 0 ? `${sysName} (${entry.value} ${entry.unit})` : sysName);
           }
         });
       }
@@ -1709,43 +1727,8 @@ class DashboardApp {
     const tbody = document.getElementById('pipeline-table-body');
     if (!tbody) return;
 
-    const searchStr = (document.getElementById('pipeline-search').value || '').toLowerCase();
-    const region = document.getElementById('pipeline-filter-region').value;
-    const investor = document.getElementById('pipeline-filter-investor').value;
-    const business = document.getElementById('pipeline-filter-business').value;
-    const sortVal = document.getElementById('pipeline-sort') ? document.getElementById('pipeline-sort').value : 'nearest';
-
-    let projects = window.db.getProjects();
+    const projects = this.getFilteredPipelineProjects();
     const members = window.db.getMembers();
-
-    // Filters
-    if (searchStr) {
-      projects = projects.filter(p => 
-        p.code.toLowerCase().includes(searchStr) || 
-        p.name.toLowerCase().includes(searchStr) || 
-        p.client.toLowerCase().includes(searchStr)
-      );
-    }
-    if (region) projects = projects.filter(p => p.region === region);
-    if (investor) projects = projects.filter(p => p.investor === investor);
-    if (business) projects = projects.filter(p => p.businessType === business);
-
-    // Sorting
-    if (sortVal === 'nearest') {
-      projects.sort((a, b) => {
-        const ad = a.deadline ? new Date(a.deadline) : new Date(8640000000000000);
-        const bd = b.deadline ? new Date(b.deadline) : new Date(8640000000000000);
-        return ad - bd;
-      });
-    } else if (sortVal === 'latest') {
-      projects.sort((a, b) => {
-        const ad = a.deadline ? new Date(a.deadline) : new Date(0);
-        const bd = b.deadline ? new Date(b.deadline) : new Date(0);
-        return bd - ad;
-      });
-    } else if (sortVal === 'code') {
-      projects.sort((a, b) => a.code.localeCompare(b.code));
-    }
 
     // Render Summary Cards Row
     let countTotal = projects.length;
@@ -1859,16 +1842,17 @@ class DashboardApp {
 
       let systemsHtml = '';
       if (p.systems) {
-        Object.entries(p.systems).forEach(([sysName, cap]) => {
-          if (cap > 0) {
+        Object.entries(p.systems).forEach(([sysName, rawCap]) => {
+          const entry = window.parseSystemEntry(sysName, rawCap);
+          if (entry.value > 0) {
             let sysBadgeClass = 'bg-success';
             if (sysName === 'Farm') sysBadgeClass = 'bg-warning text-dark';
             else if (sysName === 'Floating') sysBadgeClass = 'bg-info text-dark';
             else if (sysName === 'Carpark') sysBadgeClass = 'bg-secondary';
             else if (sysName === 'BESS') sysBadgeClass = 'bg-danger';
+            else if (entry.isCustomUnit) sysBadgeClass = 'bg-primary';
 
-            const unit = sysName === 'BESS' ? 'kWh' : 'kWp';
-            systemsHtml += `<span class="badge ${sysBadgeClass} me-1 mb-1">${sysName} (${(parseFloat(cap) * 1000).toFixed(0)} ${unit})</span>`;
+            systemsHtml += `<span class="badge ${sysBadgeClass} me-1 mb-1">${window.formatSystemBadgeText(sysName, rawCap)}</span>`;
           }
         });
       }
@@ -1934,43 +1918,8 @@ class DashboardApp {
     const tbody = document.getElementById('awarded-pipeline-table-body');
     if (!tbody) return;
 
-    const searchStr = (document.getElementById('awarded-pipeline-search').value || '').toLowerCase();
-    const region = document.getElementById('awarded-pipeline-filter-region').value;
-    const investor = document.getElementById('awarded-pipeline-filter-investor').value;
-    const business = document.getElementById('awarded-pipeline-filter-business').value;
-    const sortVal = document.getElementById('awarded-pipeline-sort') ? document.getElementById('awarded-pipeline-sort').value : 'nearest';
-
-    let projects = window.db.getAwardedProjects();
+    const projects = this.getFilteredAwardedProjects();
     const members = window.db.getMembers();
-
-    // Filters
-    if (searchStr) {
-      projects = projects.filter(p => 
-        p.code.toLowerCase().includes(searchStr) || 
-        p.name.toLowerCase().includes(searchStr) || 
-        p.client.toLowerCase().includes(searchStr)
-      );
-    }
-    if (region) projects = projects.filter(p => p.region === region);
-    if (investor) projects = projects.filter(p => p.investor === investor);
-    if (business) projects = projects.filter(p => p.businessType === business);
-
-    // Sorting
-    if (sortVal === 'nearest') {
-      projects.sort((a, b) => {
-        const ad = a.deadline ? new Date(a.deadline) : new Date(8640000000000000);
-        const bd = b.deadline ? new Date(b.deadline) : new Date(8640000000000000);
-        return ad - bd;
-      });
-    } else if (sortVal === 'latest') {
-      projects.sort((a, b) => {
-        const ad = a.deadline ? new Date(a.deadline) : new Date(0);
-        const bd = b.deadline ? new Date(b.deadline) : new Date(0);
-        return bd - ad;
-      });
-    } else if (sortVal === 'code') {
-      projects.sort((a, b) => a.code.localeCompare(b.code));
-    }
 
     // Render Summary Cards Row
     let countTotal = projects.length;
@@ -2084,16 +2033,17 @@ class DashboardApp {
 
       let systemsHtml = '';
       if (p.systems) {
-        Object.entries(p.systems).forEach(([sysName, cap]) => {
-          if (cap > 0) {
+        Object.entries(p.systems).forEach(([sysName, rawCap]) => {
+          const entry = window.parseSystemEntry(sysName, rawCap);
+          if (entry.value > 0) {
             let sysBadgeClass = 'bg-success';
             if (sysName === 'Farm') sysBadgeClass = 'bg-warning text-dark';
             else if (sysName === 'Floating') sysBadgeClass = 'bg-info text-dark';
             else if (sysName === 'Carpark') sysBadgeClass = 'bg-secondary';
             else if (sysName === 'BESS') sysBadgeClass = 'bg-danger';
+            else if (entry.isCustomUnit) sysBadgeClass = 'bg-primary';
 
-            const unit = sysName === 'BESS' ? 'kWh' : 'kWp';
-            systemsHtml += `<span class="badge ${sysBadgeClass} me-1 mb-1">${sysName} (${(parseFloat(cap) * 1000).toFixed(0)} ${unit})</span>`;
+            systemsHtml += `<span class="badge ${sysBadgeClass} me-1 mb-1">${window.formatSystemBadgeText(sysName, rawCap)}</span>`;
           }
         });
       }
@@ -2868,52 +2818,123 @@ class DashboardApp {
     return items;
   }
 
-  appendCustomSystemItem(containerId, name, capacity = '') {
+  openAddCustomSystemModal(targetContainerId) {
+    this._customSystemTargetContainer = targetContainerId;
+    const nameInp = document.getElementById('custom-system-name-input');
+    const unitInp = document.getElementById('custom-system-unit-input');
+    if (nameInp) nameInp.value = '';
+    if (unitInp) unitInp.value = 'งาน';
+    const modalEl = document.getElementById('addCustomSystemModal');
+    if (modalEl) {
+      const m = bootstrap.Modal.getOrCreateInstance(modalEl);
+      m.show();
+      setTimeout(() => { if (nameInp) nameInp.focus(); }, 250);
+    }
+  }
+
+  populateSystemFilterDropdowns() {
+    const standard = [
+      { value: 'Rooftop', label: 'Solar Rooftop' },
+      { value: 'Farm', label: 'Solar Farm' },
+      { value: 'Floating', label: 'Solar Floating' },
+      { value: 'Carpark', label: 'Solar Carpark' },
+      { value: 'BESS', label: 'BESS' }
+    ];
+    const standardNames = new Set(standard.map(s => s.value));
+    const customNames = new Set();
+    const allProjs = [...window.db.getProjects(), ...window.db.getAwardedProjects()];
+    allProjs.forEach(p => {
+      if (p.systems && typeof p.systems === 'object') {
+        Object.keys(p.systems).forEach(k => {
+          if (!standardNames.has(k) && window.parseSystemEntry(k, p.systems[k]).value > 0) {
+            customNames.add(k);
+          }
+        });
+      }
+    });
+
+    ['pipeline-filter-system', 'awarded-pipeline-filter-system'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      const prev = sel.value;
+      sel.innerHTML = '<option value="">All Systems</option>';
+      standard.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.value;
+        opt.textContent = s.label;
+        sel.appendChild(opt);
+      });
+      Array.from(customNames).sort().forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      if (prev && Array.from(sel.options).some(o => o.value === prev)) {
+        sel.value = prev;
+      }
+    });
+  }
+
+  appendCustomSystemItem(containerId, name, rawVal = '', unitOverride = '') {
     const container = document.getElementById(containerId);
     if (!container) return;
-    
+
     const btnCol = container.querySelector('.col-12');
-    
+    const isObj = rawVal && typeof rawVal === 'object';
+    const capacity = isObj ? (rawVal.value !== undefined && rawVal.value !== null ? rawVal.value : '') : rawVal;
+    const unit = (unitOverride || (isObj ? rawVal.unit : '') || 'MW').trim();
+
     const col = document.createElement('div');
     col.className = 'col-md-6 col-lg-4 custom-system-item';
     col.setAttribute('data-system-name', name);
-    
+    col.setAttribute('data-system-unit', unit);
+
     const prefix = containerId.startsWith('edit') ? 'edit-project' : 'project';
-    const cleanSystemIdName = name.replace(/[^a-zA-Z0-9]/g, '_');
-    const uniqId = `${prefix}-system-${cleanSystemIdName}`;
-    const wrapperId = `${prefix}-capacity-${cleanSystemIdName}-wrapper`;
-    const capId = `${prefix}-capacity-${cleanSystemIdName}`;
-    
-    const isChecked = capacity !== '' && capacity > 0;
-    
+    const uid = String(Date.now()) + '_' + Math.floor(Math.random() * 10000);
+    const uniqId = `${prefix}-system-custom-${uid}`;
+    const wrapperId = `${prefix}-capacity-custom-${uid}-wrapper`;
+    const capId = `${prefix}-capacity-custom-${uid}`;
+
+    const isChecked = capacity !== '' && parseFloat(capacity) > 0;
+
     col.innerHTML = `
       <div class="system-row-item">
         <div class="form-check">
           <input class="form-check-input custom-system-chk" type="checkbox" id="${uniqId}" value="${name}" ${isChecked ? 'checked' : ''}>
-          <label class="form-check-label fw-semibold" for="${uniqId}" style="cursor: pointer;">${name}</label>
+          <label class="form-check-label fw-semibold" for="${uniqId}" style="cursor: pointer;">${name} <small class="text-muted">(${unit})</small></label>
         </div>
         <div id="${wrapperId}" class="system-capacity-input" style="display: ${isChecked ? 'block' : 'none'};">
-          <input type="number" step="0.001" min="0" class="form-control form-control-sm border-success text-end custom-system-cap" id="${capId}" placeholder="0.00 MW" value="${capacity}">
+          <input type="number" step="any" min="0" class="form-control form-control-sm border-success text-end custom-system-cap" id="${capId}" placeholder="0 (${unit})" value="${capacity}">
         </div>
         <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2 border-0 remove-custom-sys-btn" style="position: absolute; right: 8px; top: 2px; font-size: 10px;" onclick="this.closest('.custom-system-item').remove()"><i class="fas fa-times"></i></button>
       </div>
     `;
-    
+
     const chk = col.querySelector('.custom-system-chk');
     const wrap = col.querySelector('.system-capacity-input');
     const capInput = col.querySelector('.custom-system-cap');
-    
+
     chk.addEventListener('change', (e) => {
       wrap.style.display = e.target.checked ? 'block' : 'none';
       if (!e.target.checked) {
         capInput.value = '';
+      } else {
+        setTimeout(() => capInput.focus(), 50);
       }
     });
-    
+
     if (btnCol) {
       container.insertBefore(col, btnCol);
     } else {
       container.appendChild(col);
+    }
+
+    if (!isChecked && rawVal && typeof rawVal === 'object' && rawVal.value === '') {
+      // Newly added via modal: auto-check and focus input so user can type quantity right away
+      chk.checked = true;
+      wrap.style.display = 'block';
+      setTimeout(() => capInput.focus(), 100);
     }
   }
 
@@ -2933,13 +2954,15 @@ class DashboardApp {
       }
     });
     
-    // Custom systems
+    // Custom systems (preserve unit when non-MW)
     container.querySelectorAll('.custom-system-item').forEach(itemCol => {
       const name = itemCol.getAttribute('data-system-name');
+      const unit = (itemCol.getAttribute('data-system-unit') || 'MW').trim();
       const chk = itemCol.querySelector('.custom-system-chk');
       const capInput = itemCol.querySelector('.custom-system-cap');
       if (chk && chk.checked) {
-        systems[name] = parseFloat(capInput.value) || 0;
+        const val = parseFloat(capInput.value) || 0;
+        systems[name] = unit.toUpperCase() === 'MW' ? val : { value: val, unit: unit };
       }
     });
     
@@ -3160,9 +3183,10 @@ class DashboardApp {
     const region = document.getElementById('pipeline-filter-region').value;
     const investor = document.getElementById('pipeline-filter-investor').value;
     const business = document.getElementById('pipeline-filter-business').value;
+    const systemFilter = document.getElementById('pipeline-filter-system') ? document.getElementById('pipeline-filter-system').value : '';
     const sortVal = document.getElementById('pipeline-sort') ? document.getElementById('pipeline-sort').value : 'nearest';
 
-    let projects = window.db.getProjects();
+    let projects = [...window.db.getProjects()];
 
     // Filters
     if (searchStr) {
@@ -3175,6 +3199,9 @@ class DashboardApp {
     if (region) projects = projects.filter(p => p.region === region);
     if (investor) projects = projects.filter(p => p.investor === investor);
     if (business) projects = projects.filter(p => p.businessType === business);
+    if (systemFilter) {
+      projects = projects.filter(p => p.systems && window.parseSystemEntry(systemFilter, p.systems[systemFilter]).value > 0);
+    }
 
     // Sorting
     if (sortVal === 'nearest') {
@@ -3200,9 +3227,10 @@ class DashboardApp {
     const region = document.getElementById('awarded-pipeline-filter-region').value;
     const investor = document.getElementById('awarded-pipeline-filter-investor').value;
     const business = document.getElementById('awarded-pipeline-filter-business').value;
+    const systemFilter = document.getElementById('awarded-pipeline-filter-system') ? document.getElementById('awarded-pipeline-filter-system').value : '';
     const sortVal = document.getElementById('awarded-pipeline-sort') ? document.getElementById('awarded-pipeline-sort').value : 'nearest';
 
-    let projects = window.db.getAwardedProjects();
+    let projects = [...window.db.getAwardedProjects()];
 
     // Filters
     if (searchStr) {
@@ -3215,6 +3243,9 @@ class DashboardApp {
     if (region) projects = projects.filter(p => p.region === region);
     if (investor) projects = projects.filter(p => p.investor === investor);
     if (business) projects = projects.filter(p => p.businessType === business);
+    if (systemFilter) {
+      projects = projects.filter(p => p.systems && window.parseSystemEntry(systemFilter, p.systems[systemFilter]).value > 0);
+    }
 
     // Sorting
     if (sortVal === 'nearest') {
@@ -3244,7 +3275,7 @@ class DashboardApp {
       const rows = projects.map(p => {
         const eng = members.find(m => m.id === p.engineer);
         const engName = eng ? eng.name : 'Unassigned';
-        const systemsStr = p.systems ? Object.entries(p.systems).map(([name, cap]) => `${name} (${(cap * 1000).toFixed(0)} ${name === 'BESS' ? 'kWh' : 'kWp'})`).join('; ') : '';
+        const systemsStr = p.systems ? Object.entries(p.systems).map(([name, cap]) => window.formatSystemBadgeText(name, cap)).join('; ') : '';
         const coordsStr = (p.lat !== null && p.lng !== null) ? `${p.lat}, ${p.lng}` : '';
         return [p.code, p.name, p.region, engName, p.investor, p.businessType, p.client, systemsStr, p.capacity, coordsStr, p.googleMapsLink || '', p.deadline, p.status, p.stage];
       });
@@ -3276,7 +3307,7 @@ class DashboardApp {
       const rows = projects.map(p => {
         const eng = members.find(m => m.id === p.engineer);
         const engName = eng ? eng.name : 'Unassigned';
-        const systemsStr = p.systems ? Object.entries(p.systems).map(([name, cap]) => `${name} (${(cap * 1000).toFixed(0)} ${name === 'BESS' ? 'kWh' : 'kWp'})`).join('; ') : '';
+        const systemsStr = p.systems ? Object.entries(p.systems).map(([name, cap]) => window.formatSystemBadgeText(name, cap)).join('; ') : '';
         const coordsStr = (p.lat !== null && p.lng !== null) ? `${p.lat}, ${p.lng}` : '';
         return [p.code, p.name, p.region, engName, p.investor, p.businessType, p.client, systemsStr, p.capacity, coordsStr, p.googleMapsLink || '', p.deadline, p.status, p.stage, p.constructionDate || '', p.codDate || '', p.prTest || '', p.pv || '', p.inverter || '', p.awardNote || ''];
       });

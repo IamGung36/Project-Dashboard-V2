@@ -99,7 +99,7 @@
       </ul>
 
       <div class="sidebar-version-info">
-        Project Dashboard | By IamGung V2.2.3
+        Project Dashboard | By IamGung V2.2.4
       </div>
       
       <!-- Sidebar connection widget -->
@@ -331,15 +331,15 @@
 
           <!-- Filters -->
           <div class="glass-card p-4 mb-4">
-            <div class="row g-3">
-              <div class="col-md-4">
+            <div class="row g-2 align-items-end">
+              <div class="col-12 col-lg-3">
                 <label for="pipeline-search" class="form-label text-muted fs-7">Search (Name / Code / Client)</label>
                 <div class="input-group">
                   <span class="input-group-text bg-transparent border-end-0 border-success-subtle"><i class="fas fa-search text-muted"></i></span>
                   <input type="text" id="pipeline-search" class="form-control border-start-0 border-success-subtle" placeholder="Type name/code...">
                 </div>
               </div>
-              <div class="col-md-2">
+              <div class="col-6 col-md-4 col-lg">
                 <label for="pipeline-filter-region" class="form-label text-muted fs-7">Region</label>
                 <select id="pipeline-filter-region" class="form-select border-success-subtle">
                   <option value="">All Regions</option>
@@ -351,7 +351,7 @@
                   <option value="West">West</option>
                 </select>
               </div>
-              <div class="col-md-2">
+              <div class="col-6 col-md-4 col-lg">
                 <label for="pipeline-filter-investor" class="form-label text-muted fs-7">Investor</label>
                 <select id="pipeline-filter-investor" class="form-select border-success-subtle">
                   <option value="">All Investors</option>
@@ -362,7 +362,7 @@
                   <option value="Other">Other</option>
                 </select>
               </div>
-              <div class="col-md-2">
+              <div class="col-6 col-md-4 col-lg">
                 <label for="pipeline-filter-business" class="form-label text-muted fs-7">Business Type</label>
                 <select id="pipeline-filter-business" class="form-select border-success-subtle">
                   <option value="">All Types</option>
@@ -371,8 +371,19 @@
                   <option value="Trading">Trading</option>
                 </select>
               </div>
-              <div class="col-md-2">
-                <label for="pipeline-sort" class="form-label text-muted fs-7">Sort By</label>
+              <div class="col-6 col-md-6 col-lg">
+                <label for="pipeline-filter-system" class="form-label text-muted fs-7">System</label>
+                <select id="pipeline-filter-system" class="form-select border-success-subtle">
+                  <option value="">All Systems</option>
+                  <option value="Rooftop">Solar Rooftop</option>
+                  <option value="Farm">Solar Farm</option>
+                  <option value="Floating">Solar Floating</option>
+                  <option value="Carpark">Solar Carpark</option>
+                  <option value="BESS">BESS</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6 col-lg">
+                <label for="pipeline-sort" class="form-label text-muted fs-7">Due Date</label>
                 <select id="pipeline-sort" class="form-select border-success-subtle">
                   <option value="nearest" selected>Due Date (Nearest First)</option>
                   <option value="latest">Due Date (Latest First)</option>
@@ -444,15 +455,15 @@
 
           <!-- Filters -->
           <div class="glass-card p-4 mb-4">
-            <div class="row g-3">
-              <div class="col-md-4">
+            <div class="row g-2 align-items-end">
+              <div class="col-12 col-lg-3">
                 <label for="awarded-pipeline-search" class="form-label text-muted fs-7">Search (Name / Code / Client)</label>
                 <div class="input-group">
                   <span class="input-group-text bg-transparent border-end-0 border-success-subtle"><i class="fas fa-search text-muted"></i></span>
                   <input type="text" id="awarded-pipeline-search" class="form-control border-start-0 border-success-subtle" placeholder="Type name/code...">
                 </div>
               </div>
-              <div class="col-md-2">
+              <div class="col-6 col-md-4 col-lg">
                 <label for="awarded-pipeline-filter-region" class="form-label text-muted fs-7">Region</label>
                 <select id="awarded-pipeline-filter-region" class="form-select border-success-subtle">
                   <option value="">All Regions</option>
@@ -464,7 +475,7 @@
                   <option value="West">West</option>
                 </select>
               </div>
-              <div class="col-md-2">
+              <div class="col-6 col-md-4 col-lg">
                 <label for="awarded-pipeline-filter-investor" class="form-label text-muted fs-7">Investor</label>
                 <select id="awarded-pipeline-filter-investor" class="form-select border-success-subtle">
                   <option value="">All Investors</option>
@@ -475,7 +486,7 @@
                   <option value="Other">Other</option>
                 </select>
               </div>
-              <div class="col-md-2">
+              <div class="col-6 col-md-4 col-lg">
                 <label for="awarded-pipeline-filter-business" class="form-label text-muted fs-7">Business Type</label>
                 <select id="awarded-pipeline-filter-business" class="form-select border-success-subtle">
                   <option value="">All Types</option>
@@ -484,8 +495,19 @@
                   <option value="Trading">Trading</option>
                 </select>
               </div>
-              <div class="col-md-2">
-                <label for="awarded-pipeline-sort" class="form-label text-muted fs-7">Sort By</label>
+              <div class="col-6 col-md-6 col-lg">
+                <label for="awarded-pipeline-filter-system" class="form-label text-muted fs-7">System</label>
+                <select id="awarded-pipeline-filter-system" class="form-select border-success-subtle">
+                  <option value="">All Systems</option>
+                  <option value="Rooftop">Solar Rooftop</option>
+                  <option value="Farm">Solar Farm</option>
+                  <option value="Floating">Solar Floating</option>
+                  <option value="Carpark">Solar Carpark</option>
+                  <option value="BESS">BESS</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6 col-lg">
+                <label for="awarded-pipeline-sort" class="form-label text-muted fs-7">Due Date</label>
                 <select id="awarded-pipeline-sort" class="form-select border-success-subtle">
                   <option value="nearest" selected>Due Date (Nearest First)</option>
                   <option value="latest">Due Date (Latest First)</option>
@@ -1548,6 +1570,45 @@
             <div id="map-drawer-layers-list" class="flex-grow-1" style="overflow-y: auto;"></div>
           </aside>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: ADD CUSTOM SYSTEM TYPE ================= -->
+  <div class="modal fade" id="addCustomSystemModal" tabindex="-1" aria-labelledby="addCustomSystemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+      <div class="modal-content glass-card border-success-subtle text-color" style="background: var(--card-bg); backdrop-filter: blur(15px); border-radius: 12px;">
+        <div class="modal-header border-bottom border-success-subtle py-3">
+          <h5 class="modal-title fw-bold text-success" id="addCustomSystemModalLabel">
+            <i class="fas fa-plus-circle me-2"></i>Add New System Type
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form id="add-custom-system-form">
+          <div class="modal-body p-4">
+            <div class="mb-3">
+              <label for="custom-system-name-input" class="form-label fw-bold">ชื่อระบบ / ประเภทงาน (System Name)</label>
+              <input type="text" class="form-control border-success-subtle" id="custom-system-name-input" placeholder="เช่น งานรื้อ, EV Charger, Water Pump" required>
+            </div>
+            <div class="mb-2">
+              <label for="custom-system-unit-input" class="form-label fw-bold">หน่วยนับ (Unit)</label>
+              <input type="text" class="form-control border-success-subtle" id="custom-system-unit-input" placeholder="เช่น งาน, ชุด, จุด, MW, kWp" value="งาน" required>
+            </div>
+            <div class="d-flex flex-wrap gap-1 mt-2">
+              <span class="text-muted me-1" style="font-size: 11px;">เลือกด่วน:</span>
+              <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 custom-unit-chip" data-unit="งาน" style="font-size: 11px;">งาน</button>
+              <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 custom-unit-chip" data-unit="ชุด" style="font-size: 11px;">ชุด</button>
+              <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 custom-unit-chip" data-unit="จุด" style="font-size: 11px;">จุด</button>
+              <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 custom-unit-chip" data-unit="ระบบ" style="font-size: 11px;">ระบบ</button>
+              <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 custom-unit-chip" data-unit="MW" style="font-size: 11px;">MW</button>
+              <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 custom-unit-chip" data-unit="kWp" style="font-size: 11px;">kWp</button>
+            </div>
+          </div>
+          <div class="modal-footer border-top border-success-subtle py-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-success btn-sm px-4 fw-bold">เพิ่มรายการ</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
