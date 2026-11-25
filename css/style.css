@@ -294,8 +294,14 @@ footer {
   box-shadow: var(--shadow);
 }
 
-[data-theme="dark"] .leaflet-tile-pane {
+[data-theme="dark"] .map-container:not(.map-satellite-active) .leaflet-tile-pane {
   filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+[data-theme="dark"] .leaflet-control-layers {
+  background: var(--card-bg);
+  color: var(--text-color);
+  border-color: var(--card-border);
 }
 
 /* Chart Styles */

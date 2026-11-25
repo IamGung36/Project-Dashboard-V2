@@ -890,30 +890,67 @@ class DashboardApp {
       });
   }
 
+  /**
+   * Initialize a Leaflet map instance with Street & Satellite basemap switcher.
+   */
+  _createMapInstance(elementId, centerCoords) {
+    const streetLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    });
+    const satelliteLayer = L.layerGroup([
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri',
+        maxZoom: 19
+      }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19
+      })
+    ]);
+
+    const baseMaps = {
+      'Street Map': streetLayer,
+      'Satellite': satelliteLayer
+    };
+    const savedLayer = localStorage.getItem('MAP_BASE_LAYER');
+    const initialName = savedLayer === 'Satellite' ? 'Satellite' : 'Street Map';
+
+    const map = L.map(elementId, {
+      center: centerCoords,
+      zoom: 6,
+      layers: [baseMaps[initialName]],
+      attributionControl: true
+    });
+
+    map.getContainer().classList.toggle('map-satellite-active', initialName === 'Satellite');
+    L.control.layers(baseMaps, null, { position: 'topright', collapsed: false }).addTo(map);
+
+    map.on('baselayerchange', (e) => {
+      const isSatellite = e.name === 'Satellite';
+      map.getContainer().classList.toggle('map-satellite-active', isSatellite);
+      localStorage.setItem('MAP_BASE_LAYER', e.name);
+    });
+
+    // Compatibility helper methods for search/resizing
+    map.setCenter = (coords) => {
+      map.setView([coords.lat, coords.lng], map.getZoom());
+    };
+    map.setZoom = (zoom) => {
+      map.setView(map.getCenter(), zoom);
+    };
+
+    return map;
+  }
+
   initMaps() {
     const thailandCenter = [this.thailandCenter.lat, this.thailandCenter.lng];
-    const tileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-    const tileAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
     const portMapEl = document.getElementById('portfolio-map');
     if (portMapEl) {
       if (this.portfolioMap) {
         try { this.portfolioMap.remove(); } catch(e) {}
       }
-      this.portfolioMap = L.map('portfolio-map', {
-        center: thailandCenter,
-        zoom: 6,
-        attributionControl: true
-      });
-      L.tileLayer(tileUrl, { attribution: tileAttribution, maxZoom: 19 }).addTo(this.portfolioMap);
-      
-      // Compatibility helper methods for search/resizing
-      this.portfolioMap.setCenter = (coords) => {
-        this.portfolioMap.setView([coords.lat, coords.lng], this.portfolioMap.getZoom());
-      };
-      this.portfolioMap.setZoom = (zoom) => {
-        this.portfolioMap.setView(this.portfolioMap.getCenter(), zoom);
-      };
+      this.portfolioMap = this._createMapInstance('portfolio-map', thailandCenter);
     }
 
     const overMapEl = document.getElementById('overview-map');
@@ -921,20 +958,7 @@ class DashboardApp {
       if (this.overviewMap) {
         try { this.overviewMap.remove(); } catch(e) {}
       }
-      this.overviewMap = L.map('overview-map', {
-        center: thailandCenter,
-        zoom: 6,
-        attributionControl: true
-      });
-      L.tileLayer(tileUrl, { attribution: tileAttribution, maxZoom: 19 }).addTo(this.overviewMap);
-      
-      // Compatibility helper methods for search/resizing
-      this.overviewMap.setCenter = (coords) => {
-        this.overviewMap.setView([coords.lat, coords.lng], this.overviewMap.getZoom());
-      };
-      this.overviewMap.setZoom = (zoom) => {
-        this.overviewMap.setView(this.overviewMap.getCenter(), zoom);
-      };
+      this.overviewMap = this._createMapInstance('overview-map', thailandCenter);
     }
 
     this.portfolioMarkers = [];
@@ -3506,8 +3530,10 @@ class DashboardApp {
       'var pinHex="' + pinColor + '";' +
       'function go(){' +
         'if(typeof L==="undefined"){setTimeout(go,300);return;}' +
-        'var map=L.map("map",{scrollWheelZoom:true});' +
-        'L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"\u00a9 OpenStreetMap contributors",maxZoom:19}).addTo(map);' +
+        'var st=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"\u00a9 OpenStreetMap contributors",maxZoom:19});' +
+        'var sat=L.layerGroup([L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{attribution:"Tiles \u00a9 Esri",maxZoom:19}),L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19})]);' +
+        'var map=L.map("map",{scrollWheelZoom:true,layers:[st]});' +
+        'L.control.layers({"Street Map":st,"Satellite":sat},null,{position:"topright",collapsed:false}).addTo(map);' +
         'var ic=L.icon({iconUrl:iconUrl,iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34]});' +
         'var bds=[];' +
         'M.forEach(function(p){' +
