@@ -616,26 +616,6 @@ class DashboardApp {
   setTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('THEME', theme);
-    
-    // Update Leaflet tile layer if maps are loaded
-    const tileUrl = theme === 'dark' 
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-      
-    if (this.portfolioMap) {
-      this.portfolioMap.eachLayer(layer => {
-        if (layer instanceof L.TileLayer) {
-          layer.setUrl(tileUrl);
-        }
-      });
-    }
-    if (this.overviewMap) {
-      this.overviewMap.eachLayer(layer => {
-        if (layer instanceof L.TileLayer) {
-          layer.setUrl(tileUrl);
-        }
-      });
-    }
 
     // Also update pin icons to stand out
     this.updateMapMarkers();
@@ -913,11 +893,8 @@ class DashboardApp {
 
   initMaps() {
     const thailandCenter = [this.thailandCenter.lat, this.thailandCenter.lng];
-    const currentTheme = localStorage.getItem('THEME') || 'light';
-    const tileUrl = currentTheme === 'dark' 
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-    const tileAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+    const tileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+    const tileAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
     const portMapEl = document.getElementById('portfolio-map');
     if (portMapEl) {
@@ -929,7 +906,7 @@ class DashboardApp {
         zoom: 6,
         attributionControl: true
       });
-      L.tileLayer(tileUrl, { attribution: tileAttribution, maxZoom: 20 }).addTo(this.portfolioMap);
+      L.tileLayer(tileUrl, { attribution: tileAttribution, maxZoom: 19 }).addTo(this.portfolioMap);
       
       // Compatibility helper methods for search/resizing
       this.portfolioMap.setCenter = (coords) => {
@@ -950,7 +927,7 @@ class DashboardApp {
         zoom: 6,
         attributionControl: true
       });
-      L.tileLayer(tileUrl, { attribution: tileAttribution, maxZoom: 20 }).addTo(this.overviewMap);
+      L.tileLayer(tileUrl, { attribution: tileAttribution, maxZoom: 19 }).addTo(this.overviewMap);
       
       // Compatibility helper methods for search/resizing
       this.overviewMap.setCenter = (coords) => {
@@ -3531,7 +3508,7 @@ class DashboardApp {
       'function go(){' +
         'if(typeof L==="undefined"){setTimeout(go,300);return;}' +
         'var map=L.map("map",{scrollWheelZoom:true});' +
-        'L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:"\u00a9 OSM \u00a9 CARTO"}).addTo(map);' +
+        'L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"\u00a9 OpenStreetMap contributors",maxZoom:19}).addTo(map);' +
         'var ic=L.icon({iconUrl:iconUrl,iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34]});' +
         'var bds=[];' +
         'M.forEach(function(p){' +

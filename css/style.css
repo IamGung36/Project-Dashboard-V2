@@ -294,6 +294,10 @@ footer {
   box-shadow: var(--shadow);
 }
 
+[data-theme="dark"] .leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
 /* Chart Styles */
 .chart-container {
   position: relative;
