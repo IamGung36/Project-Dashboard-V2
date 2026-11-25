@@ -150,6 +150,12 @@ class LocalDatabase {
       }
       if (!Array.isArray(p.revisions)) p.revisions = [];
 
+      // 3b. Map Drawings
+      if (typeof p.mapDrawings === 'string' && p.mapDrawings.trim() !== '') {
+        try { p.mapDrawings = JSON.parse(p.mapDrawings); } catch (e) { p.mapDrawings = []; }
+      }
+      if (!Array.isArray(p.mapDrawings)) p.mapDrawings = [];
+
       // 4. Spellings and stages
       if (p.stage === 'Awarded') p.stage = 'Award';
       if (p.stage === 'Underdevelopment') p.stage = 'Underdevelop';
@@ -535,6 +541,7 @@ class LocalDatabase {
       inverter: project.inverter || '',
       awardNote: project.awardNote || '',
       revisions: project.revisions || [],
+      mapDrawings: Array.isArray(project.mapDrawings) ? project.mapDrawings : [],
       updatedAt: Date.now()
     };
 

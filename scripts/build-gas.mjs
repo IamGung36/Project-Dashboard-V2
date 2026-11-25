@@ -31,7 +31,8 @@ const jsFiles = [
   { src: 'app.js', dest: 'app_js.html' },
   { src: 'calendar.js', dest: 'calendar_js.html' },
   { src: 'kanban.js', dest: 'kanban_js.html' },
-  { src: 'manhours.js', dest: 'manhours_js.html' }
+  { src: 'manhours.js', dest: 'manhours_js.html' },
+  { src: 'map-drawer.js', dest: 'map_drawer_js.html' }
 ];
 
 for (const f of jsFiles) {
@@ -72,12 +73,13 @@ const scriptReplacements = `
   <?!= include("kanban_js"); ?>
   <?!= include("calendar_js"); ?>
   <?!= include("manhours_js"); ?>
+  <?!= include("map_drawer_js"); ?>
   <?!= include("app_js"); ?>
 `;
 
-// Replace the block of 5 script tags
+// Replace the block of script tags
 html = html.replace(
-  /<script\s+src="js\/db\.js"><\/script>\s*<script\s+src="js\/kanban\.js"><\/script>\s*<script\s+src="js\/calendar\.js"><\/script>\s*<script\s+src="js\/manhours\.js"><\/script>\s*<script\s+src="js\/app\.js"><\/script>/,
+  /<script\s+src="js\/db\.js"><\/script>\s*<script\s+src="js\/kanban\.js"><\/script>\s*<script\s+src="js\/calendar\.js"><\/script>\s*<script\s+src="js\/manhours\.js"><\/script>\s*<script\s+src="js\/map-drawer\.js"><\/script>\s*<script\s+src="js\/app\.js"><\/script>/,
   scriptReplacements.trim()
 );
 

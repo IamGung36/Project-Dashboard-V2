@@ -21,6 +21,10 @@ class DashboardApp {
     this.overviewMap = null;
     this.portfolioMarkers = [];
     this.overviewMarkers = [];
+    this.portfolioDrawingsLayer = null;
+    this.overviewDrawingsLayer = null;
+    this.currentAddMapDrawings = [];
+    this.currentEditMapDrawings = [];
     this.portfolioCharts = {};
     this.overviewCharts = {};
     
@@ -597,8 +601,85 @@ class DashboardApp {
       });
     }
 
+    // Map Drawing Studio buttons (Add & Edit Project)
+    const addDrawBtn = document.getElementById('add-project-draw-map-btn');
+    if (addDrawBtn) {
+      addDrawBtn.addEventListener('click', () => this.openMapStudioForForm('add'));
+    }
+    const editDrawBtn = document.getElementById('edit-project-draw-map-btn');
+    if (editDrawBtn) {
+      editDrawBtn.addEventListener('click', () => this.openMapStudioForForm('edit'));
+    }
+    const addFormEl = document.getElementById('add-project-form');
+    if (addFormEl) {
+      addFormEl.addEventListener('reset', () => {
+        this.currentAddMapDrawings = [];
+        const cntEl = document.getElementById('add-project-draw-count');
+        if (cntEl) cntEl.textContent = '0';
+      });
+    }
+
     // Initial renders
     this.updateViews();
+  }
+
+  openMapStudioForForm(mode) {
+    if (!window.mapDrawer) return;
+    const isEdit = mode === 'edit';
+    const coordsEl = document.getElementById(isEdit ? 'edit-project-coords' : 'project-coords');
+    const linkEl = document.getElementById(isEdit ? 'edit-project-maps-link' : 'project-maps-link');
+    const nameEl = document.getElementById(isEdit ? 'edit-project-name' : 'project-name');
+    const regionEl = document.getElementById(isEdit ? 'edit-project-region' : 'project-region');
+    const countEl = document.getElementById(isEdit ? 'edit-project-draw-count' : 'add-project-draw-count');
+
+    const { lat, lng } = this.parseCoordinates(coordsEl ? coordsEl.value.trim() : '', linkEl ? linkEl.value.trim() : '');
+    const currentDrawings = isEdit ? this.currentEditMapDrawings : this.currentAddMapDrawings;
+    const projTitle = (nameEl && nameEl.value.trim()) ? `Map Studio: ${nameEl.value.trim()}` : 'Google Earth / Map Studio';
+
+    const applyCoords = (newLat, newLng) => {
+      if (coordsEl) coordsEl.value = `${Number(newLat).toFixed(6)}, ${Number(newLng).toFixed(6)}`;
+      if (regionEl) {
+        const reg = this.getRegionFromCoords(newLat, newLng);
+        if (reg) regionEl.value = reg;
+      }
+    };
+
+    window.mapDrawer.open({
+      title: projTitle,
+      initialLat: lat,
+      initialLng: lng,
+      drawings: currentDrawings,
+      onUseCoords: applyCoords,
+      onSave: (savedDrawings, centerCoords) => {
+        if (isEdit) {
+          this.currentEditMapDrawings = savedDrawings;
+        } else {
+          this.currentAddMapDrawings = savedDrawings;
+        }
+        if (countEl) countEl.textContent = String(savedDrawings.length);
+        if (coordsEl && !coordsEl.value.trim() && centerCoords) {
+          applyCoords(centerCoords.lat, centerCoords.lng);
+        }
+      }
+    });
+  }
+
+  zoomToProjectDrawings(projectId, mapKey) {
+    const proj = window.db.getProject(projectId);
+    const map = mapKey === 'portfolio' ? this.portfolioMap : this.overviewMap;
+    if (!proj || !map || !window.ProjectMapDrawer) return;
+    const bounds = ProjectMapDrawer.getDrawingsBounds(proj.mapDrawings || []);
+    if (bounds) {
+      map.closePopup();
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18 });
+    }
+  }
+
+  openProjectMapStudio(projectId) {
+    this.openEditProjectModal(projectId);
+    setTimeout(() => {
+      this.openMapStudioForForm('edit');
+    }, 300);
   }
 
   getRegionFromCoords(lat, lng) {
@@ -963,6 +1044,12 @@ class DashboardApp {
 
     this.portfolioMarkers = [];
     this.overviewMarkers = [];
+    if (this.portfolioMap) {
+      this.portfolioDrawingsLayer = L.layerGroup().addTo(this.portfolioMap);
+    }
+    if (this.overviewMap) {
+      this.overviewDrawingsLayer = L.layerGroup().addTo(this.overviewMap);
+    }
     this.updateMapMarkers();
   }
 
@@ -973,6 +1060,23 @@ class DashboardApp {
     this.portfolioMarkers.forEach(m => m.remove());
     this.overviewMarkers.forEach(m => m.remove());
     this.portfolioMarkers = [];
+    this.overviewMarkers = [];
+
+    const allProjects = [...window.db.getProjects(), ...window.db.getAwardedProjects()];
+    if (window.ProjectMapDrawer) {
+      if (this.portfolioDrawingsLayer) {
+        ProjectMapDrawer.renderProjectsDrawings(
+          this.portfolioDrawingsLayer,
+          allProjects.filter(p => p.stage === 'Award')
+        );
+      }
+      if (this.overviewDrawingsLayer) {
+        ProjectMapDrawer.renderProjectsDrawings(
+          this.overviewDrawingsLayer,
+          allProjects.filter(p => p.stage === 'Underdevelop')
+        );
+      }
+    }
     this.overviewMarkers = [];
 
     const projects = [...window.db.getProjects(), ...window.db.getAwardedProjects()];
@@ -1151,6 +1255,14 @@ class DashboardApp {
             </div>
           </div>
           <div class="map-card-divider"></div>
+          ${Array.isArray(p.mapDrawings) && p.mapDrawings.length > 0 ? `
+          <div class="d-flex align-items-center justify-content-between gap-2 py-1 px-1 mb-1 rounded" style="background: rgba(16, 185, 129, 0.08); font-size: 11px;">
+            <span class="text-success fw-semibold"><i class="fas fa-draw-polygon me-1"></i>${p.mapDrawings.length} วาด/วัดพื้นที่</span>
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-sm btn-success py-0 px-2" style="font-size: 10px;" onclick="window.app.zoomToProjectDrawings('${p.id}', '${p.stage === 'Award' ? 'portfolio' : 'overview'}')">ซูมดูพื้นที่</button>
+              <button type="button" class="btn btn-sm btn-outline-success py-0 px-2" style="font-size: 10px;" onclick="window.app.openProjectMapStudio('${p.id}')">แก้ไข</button>
+            </div>
+          </div>` : ''}
           ${weatherHtml}
           ${awardDetailsHtml}
         </div>
@@ -2234,6 +2346,10 @@ class DashboardApp {
     document.getElementById('edit-project-maps-link').value = proj.googleMapsLink || '';
     document.getElementById('edit-project-notes').value = proj.notes || '';
 
+    this.currentEditMapDrawings = Array.isArray(proj.mapDrawings) ? JSON.parse(JSON.stringify(proj.mapDrawings)) : [];
+    const editDrawCnt = document.getElementById('edit-project-draw-count');
+    if (editDrawCnt) editDrawCnt.textContent = String(this.currentEditMapDrawings.length);
+
     // Initialize temporary award data for Edit Project
     this.currentEditProjectAwardData = {
       constructionDate: proj.constructionDate || '',
@@ -2404,6 +2520,7 @@ class DashboardApp {
           image: imageVal,
           deliverables: deliverablesList,
           revisions: this.currentEditProjectRevisions,
+          mapDrawings: this.currentEditMapDrawings || [],
           notes: notesVal,
           status: document.getElementById('edit-project-status').value,
           stage: stageVal,
@@ -2548,12 +2665,16 @@ class DashboardApp {
         code, name, region, engineer, businessType, investor, client, 
         systems: systemsObj, lat, lng, googleMapsLink: mapsLink, 
         image: imageVal, deliverables: deliverablesList, notes: notesVal,
+        mapDrawings: this.currentAddMapDrawings || [],
         status, stage, deadline,
         ...awardDetails
       });
 
       if (newProj) {
         alert(`Project ${newProj.code} added to database successfully!`);
+        this.currentAddMapDrawings = [];
+        const addDrawCnt = document.getElementById('add-project-draw-count');
+        if (addDrawCnt) addDrawCnt.textContent = '0';
         document.getElementById('add-project-form').reset();
         
         ['Rooftop', 'Farm', 'Floating', 'Carpark', 'BESS'].forEach(sys => {

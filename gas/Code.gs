@@ -5,8 +5,8 @@
  */
 
 var SCHEMA = {
-  projects: ['id', 'code', 'name', 'region', 'engineer', 'businessType', 'investor', 'client', 'systems', 'capacity', 'lat', 'lng', 'googleMapsLink', 'image', 'deliverables', 'notes', 'status', 'stage', 'deadline', 'constructionDate', 'codDate', 'prTest', 'pv', 'inverter', 'awardNote', 'revisions', 'updatedAt'],
-  awardedProjects: ['id', 'code', 'name', 'region', 'engineer', 'businessType', 'investor', 'client', 'systems', 'capacity', 'lat', 'lng', 'googleMapsLink', 'image', 'deliverables', 'notes', 'status', 'stage', 'deadline', 'constructionDate', 'codDate', 'prTest', 'pv', 'inverter', 'awardNote', 'revisions', 'updatedAt'],
+  projects: ['id', 'code', 'name', 'region', 'engineer', 'businessType', 'investor', 'client', 'systems', 'capacity', 'lat', 'lng', 'googleMapsLink', 'image', 'deliverables', 'notes', 'status', 'stage', 'deadline', 'constructionDate', 'codDate', 'prTest', 'pv', 'inverter', 'awardNote', 'revisions', 'updatedAt', 'mapDrawings'],
+  awardedProjects: ['id', 'code', 'name', 'region', 'engineer', 'businessType', 'investor', 'client', 'systems', 'capacity', 'lat', 'lng', 'googleMapsLink', 'image', 'deliverables', 'notes', 'status', 'stage', 'deadline', 'constructionDate', 'codDate', 'prTest', 'pv', 'inverter', 'awardNote', 'revisions', 'updatedAt', 'mapDrawings'],
   members: ['id', 'name', 'role', 'updatedAt'],
   holidays: ['id', 'date', 'name', 'updatedAt'],
   manhours: ['id', 'memberId', 'date', 'hours', 'projectId', 'deliverableName', 'updatedAt'],
@@ -205,7 +205,7 @@ function sheetToObjects(sheet, headers) {
       if (val !== '' && val !== null && val !== undefined) {
         hasData = true;
       }
-      if ((key === 'systems' || key === 'deliverables' || key === 'revisions') && typeof val === 'string' && val.trim() !== '') {
+      if ((key === 'systems' || key === 'deliverables' || key === 'revisions' || key === 'mapDrawings') && typeof val === 'string' && val.trim() !== '') {
         try {
           obj[key] = JSON.parse(val);
         } catch (e) {

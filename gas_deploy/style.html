@@ -1267,4 +1267,63 @@ footer {
   border: 1px solid #ef4444 !important;
 }
 
+/* Map Drawing Studio (Google Earth Style) */
+.map-drawer-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.map-drawer-swatch:hover {
+  transform: scale(1.15);
+}
+.map-drawer-swatch.active {
+  border-color: #111827;
+  box-shadow: 0 0 0 2px #ffffff inset;
+  transform: scale(1.15);
+}
+[data-theme="dark"] .map-drawer-swatch.active {
+  border-color: #ffffff;
+}
+.map-drawer-div-icon {
+  background: transparent;
+  border: none;
+}
+.map-drawer-tooltip {
+  background: rgba(17, 24, 39, 0.88);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+.map-drawer-tooltip::before {
+  border-top-color: rgba(17, 24, 39, 0.88);
+}
+.map-drawer-live-tip {
+  background: #f59e0b;
+  color: #111827;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+.map-drawer-layer-card {
+  background: var(--bg-color);
+  transition: border-color 0.2s ease;
+}
+@media (max-width: 991.98px) {
+  .map-drawer-sidebar {
+    width: 100% !important;
+    max-height: 240px;
+    border-start: none !important;
+    border-top: 1px solid var(--card-border);
+  }
+}
+
 </style>
