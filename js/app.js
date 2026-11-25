@@ -2232,15 +2232,21 @@ class DashboardApp {
 
     dropdowns.forEach(drop => {
       if (!drop) return;
+      // Preserve currently selected value so background sync/updateViews never wipes form state
+      const prevVal = drop.value;
       const firstOpt = drop.options[0] ? drop.options[0].outerHTML : '<option value="">-- Select BD Engineer --</option>';
       drop.innerHTML = firstOpt;
-      
+
       members.forEach(m => {
         const opt = document.createElement('option');
         opt.value = m.id;
         opt.innerText = `${m.name} (${m.role})`;
         drop.appendChild(opt);
       });
+
+      if (prevVal && Array.from(drop.options).some(o => o.value === prevVal)) {
+        drop.value = prevVal;
+      }
     });
   }
 
@@ -2328,7 +2334,18 @@ class DashboardApp {
     document.getElementById('edit-project-code').value = proj.code;
     document.getElementById('edit-project-name').value = proj.name;
     document.getElementById('edit-project-region').value = proj.region;
-    document.getElementById('edit-project-engineer').value = proj.engineer;
+    const editEngSelect = document.getElementById('edit-project-engineer');
+    if (editEngSelect) {
+      if (editEngSelect.options.length <= 1) {
+        this.populateMemberDropdowns();
+      }
+      const engVal = proj.engineer || '';
+      editEngSelect.value = engVal;
+      if (engVal && editEngSelect.value !== engVal) {
+        const byName = (window.db.getMembers() || []).find(m => m.name === engVal);
+        if (byName) editEngSelect.value = byName.id;
+      }
+    }
     document.getElementById('edit-project-business').value = proj.businessType;
     document.getElementById('edit-project-investor').value = proj.investor;
     document.getElementById('edit-project-client').value = proj.client;
