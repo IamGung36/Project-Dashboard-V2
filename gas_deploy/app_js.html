@@ -3556,14 +3556,19 @@ class DashboardApp {
     const pinColor     = isPortfolio ? '#025725' : '#ea580c';
     const themeAttr    = isDark ? 'dark' : 'light';
 
-    // 4. Map markers
+    // 4. Map markers & drawings
     const markersData  = projects
-      .map(p => ({ name: p.name, code: p.code, lat: p.lat, lng: p.lng, capacity: p.capacity }))
-      .filter(m => m.lat != null && m.lng != null && !isNaN(m.lat) && !isNaN(m.lng));
+      .map(p => ({
+        name: p.name || '',
+        code: p.code || '',
+        lat: p.lat,
+        lng: p.lng,
+        capacity: p.capacity || 0,
+        mapDrawings: Array.isArray(p.mapDrawings) ? p.mapDrawings : []
+      }))
+      .filter(m => (m.lat != null && m.lng != null && !isNaN(m.lat) && !isNaN(m.lng)) || m.mapDrawings.length > 0);
     const markersJson  = JSON.stringify(markersData);
-    const iconUrl      = isPortfolio
-      ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png'
-      : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png';
+    const iconUrl      = this.getPinIconSvg(pinColor);
 
     // 5. Build HTML via array push to avoid any escaping issues
     const H = [];
@@ -3580,6 +3585,8 @@ class DashboardApp {
     H.push('*{box-sizing:border-box}body{font-family:Inter,sans-serif;background:' + bg + ';color:' + clrText + ';padding:24px;margin:0}h1,h2,h3,h4,h5,h6{font-family:Outfit,sans-serif}');
     H.push('.glass{background:' + cardBg + ';border:1px solid ' + cardBdr + ';border-radius:16px;padding:20px;box-shadow:0 4px 20px rgba(0,0,0,.07)}');
     H.push('#map{height:480px;width:100%;border-radius:12px;overflow:hidden;display:block}');
+    H.push('[data-theme=dark] #map:not(.map-satellite-active) .leaflet-tile-pane{filter:invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%)}');
+    H.push('.map-drawer-div-icon{background:transparent;border:none}');
     H.push('.chart-img{width:220px;height:220px;display:block;margin:0 auto 12px;object-fit:contain}');
     H.push('.tbl th{font-size:11px;font-weight:700;text-transform:uppercase;color:' + clrPrimary + ';border-bottom:2px solid ' + cardBdr + ';background:transparent;padding:6px 8px}');
     H.push('.tbl td{border-bottom:1px solid ' + cardBdr + ';font-size:12px;color:' + clrText + ';padding:6px 8px}.tbl tr:hover td{background:rgba(2,87,37,.03)}');
@@ -3645,25 +3652,54 @@ class DashboardApp {
     // Map script - use string split to avoid closing script tag in JS source
     var leafletSrc = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
     H.push(['<scr', 'ipt src="' + leafletSrc + '"></sc', 'ript>'].join(''));
-    // Build map init code as a plain JS string (no template literals needed)
+    // Build map init code safely using JSON.stringify for embedded strings
     var mapCode = '(function(){' +
       'var M=' + markersJson + ';' +
-      'var iconUrl="' + iconUrl + '";' +
-      'var pinHex="' + pinColor + '";' +
+      'var iconUrl=' + JSON.stringify(iconUrl) + ';' +
+      'var pinHex=' + JSON.stringify(pinColor) + ';' +
+      'function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}' +
+      'function mkIcon(kind,clr,rot){' +
+        'var c=clr||"#ef4444";' +
+        'if(kind==="pin"){return L.divIcon({className:"map-drawer-div-icon",iconSize:[26,34],iconAnchor:[13,33],html:"<svg viewBox=\\x270 0 24 32\\x27 width=\\x2726\\x27 height=\\x2734\\x27><path d=\\x27M12 0C5.37 0 0 5.37 0 12c0 8.25 12 20 12 20s12-11.75 12-20C24 5.37 18.63 0 12 0z\\x27 fill=\\x27"+c+"\\x27 stroke=\\x27#fff\\x27 stroke-width=\\x271.8\\x27/><circle cx=\\x2712\\x27 cy=\\x2711.5\\x27 r=\\x274.5\\x27 fill=\\x27#fff\\x27/></svg>"});}' +
+        'if(kind==="star"){return L.divIcon({className:"map-drawer-div-icon",iconSize:[28,28],iconAnchor:[14,14],html:"<svg viewBox=\\x270 0 24 24\\x27 width=\\x2728\\x27 height=\\x2728\\x27><path d=\\x27M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z\\x27 fill=\\x27"+c+"\\x27 stroke=\\x27#fff\\x27 stroke-width=\\x271.6\\x27/></svg>"});}' +
+        'return L.divIcon({className:"map-drawer-div-icon",iconSize:[32,32],iconAnchor:[16,16],html:"<svg viewBox=\\x270 0 36 36\\x27 width=\\x2732\\x27 height=\\x2732\\x27 style=\\x27transform:rotate("+(Number(rot)||0)+"deg)\\x27><path d=\\x27M18 3L30 22L22 22L22 33L14 33L14 22L6 22Z\\x27 fill=\\x27"+c+"\\x27 stroke=\\x27#fff\\x27 stroke-width=\\x272\\x27/></svg>"});' +
+      '}' +
       'function go(){' +
-        'if(typeof L==="undefined"){setTimeout(go,300);return;}' +
+        'if(typeof L==="undefined"){setTimeout(go,250);return;}' +
         'var st=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"\u00a9 OpenStreetMap contributors",maxZoom:19});' +
         'var sat=L.layerGroup([L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{attribution:"Tiles \u00a9 Esri",maxZoom:19}),L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",{maxZoom:19})]);' +
         'var map=L.map("map",{scrollWheelZoom:true,layers:[st]});' +
         'L.control.layers({"Street Map":st,"Satellite":sat},null,{position:"topright",collapsed:false}).addTo(map);' +
-        'var ic=L.icon({iconUrl:iconUrl,iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34]});' +
+        'map.on("baselayerchange",function(e){map.getContainer().classList.toggle("map-satellite-active",e.name==="Satellite");});' +
+        'var ic=L.icon({iconUrl:iconUrl,iconSize:[34,34],iconAnchor:[17,34],popupAnchor:[0,-32]});' +
         'var bds=[];' +
         'M.forEach(function(p){' +
-          'var pop="<b style=\"color:"+pinHex+"\">"+p.code+"</b><br>"+p.name+"<br>"+parseFloat(p.capacity).toFixed(2)+" MWp";' +
-          'L.marker([p.lat,p.lng],{icon:ic}).addTo(map).bindPopup(pop);' +
-          'bds.push([p.lat,p.lng]);' +
+          'if(p.lat!=null&&p.lng!=null&&!isNaN(p.lat)&&!isNaN(p.lng)){' +
+            'var pop="<b style=\\x27color:"+pinHex+"\\x27>"+esc(p.code)+"</b><br>"+esc(p.name)+"<br>"+(parseFloat(p.capacity)||0).toFixed(2)+" MWp";' +
+            'L.marker([p.lat,p.lng],{icon:ic}).addTo(map).bindPopup(pop);' +
+            'bds.push([p.lat,p.lng]);' +
+          '}' +
+          'if(Array.isArray(p.mapDrawings)){' +
+            'p.mapDrawings.forEach(function(d){' +
+              'var clr=d.color||"#ef4444";' +
+              'var tip="<b>"+esc(p.code)+"</b> "+esc(d.label||"")+(d.measureText?"<br><small>"+esc(d.measureText)+"</small>":"");' +
+              'if((d.kind==="pin"||d.kind==="arrow"||d.kind==="star")&&Array.isArray(d.center)){' +
+                'L.marker(d.center,{icon:mkIcon(d.kind,clr,d.rotation)}).addTo(map).bindPopup(tip);' +
+                'bds.push(d.center);' +
+              '}else if(d.kind==="circle"&&Array.isArray(d.center)){' +
+                'L.circle(d.center,{radius:Number(d.radius)||50,color:clr,weight:3,fillColor:clr,fillOpacity:0.2}).addTo(map).bindPopup(tip);' +
+                'bds.push(d.center);' +
+              '}else if((d.kind==="measure-line"||d.kind==="polyline")&&Array.isArray(d.latlngs)){' +
+                'L.polyline(d.latlngs,{color:clr,weight:3}).addTo(map).bindPopup(tip);' +
+                'd.latlngs.forEach(function(pt){bds.push(pt);});' +
+              '}else if(Array.isArray(d.latlngs)&&d.latlngs.length>=3){' +
+                'L.polygon(d.latlngs,{color:clr,weight:3,fillColor:clr,fillOpacity:0.22}).addTo(map).bindPopup(tip);' +
+                'd.latlngs.forEach(function(pt){if(Array.isArray(pt)&&typeof pt[0]==="number")bds.push(pt);});' +
+              '}' +
+            '});' +
+          '}' +
         '});' +
-        'if(bds.length){map.fitBounds(bds,{padding:[50,50]});}else{map.setView([13.74,100.52],6);}' +
+        'if(bds.length){map.fitBounds(bds,{padding:[50,50],maxZoom:13});}else{map.setView([13.74,100.52],6);}' +
         'function rz(){map.invalidateSize();}' +
         'setTimeout(rz,150);setTimeout(rz,600);setTimeout(rz,1800);' +
       '}' +
