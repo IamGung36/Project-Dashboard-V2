@@ -170,7 +170,7 @@ class DashboardApp {
       }
     });
 
-    // Image upload listener to convert to Base64 in background and show preview
+    // Image upload listener to show preview
     const fileInput = document.getElementById('project-image-file');
     const addPreviewImg = document.getElementById('project-image-preview');
     const addPreviewWrapper = document.getElementById('project-image-preview-wrapper');
@@ -180,17 +180,11 @@ class DashboardApp {
       fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            fileInput.setAttribute('data-base64', event.target.result);
-            if (addPreviewImg && addPreviewWrapper) {
-              addPreviewImg.src = event.target.result;
-              addPreviewWrapper.style.display = 'block';
-            }
-          };
-          reader.readAsDataURL(file);
+          if (addPreviewImg && addPreviewWrapper) {
+            addPreviewImg.src = URL.createObjectURL(file);
+            addPreviewWrapper.style.display = 'block';
+          }
         } else {
-          fileInput.removeAttribute('data-base64');
           const urlVal = urlInput ? urlInput.value.trim() : '';
           if (urlVal && addPreviewImg && addPreviewWrapper) {
             addPreviewImg.src = urlVal;
@@ -228,17 +222,11 @@ class DashboardApp {
       editFileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            editFileInput.setAttribute('data-base64', event.target.result);
-            if (editPreviewImg && editPreviewWrapper) {
-              editPreviewImg.src = event.target.result;
-              editPreviewWrapper.style.display = 'block';
-            }
-          };
-          reader.readAsDataURL(file);
+          if (editPreviewImg && editPreviewWrapper) {
+            editPreviewImg.src = URL.createObjectURL(file);
+            editPreviewWrapper.style.display = 'block';
+          }
         } else {
-          editFileInput.removeAttribute('data-base64');
           const urlVal = editUrlInput ? editUrlInput.value.trim() : '';
           if (urlVal && editPreviewImg && editPreviewWrapper) {
             editPreviewImg.src = urlVal;
@@ -504,8 +492,8 @@ class DashboardApp {
               gasStatusDiv.innerHTML = '<i class="fas fa-check-circle me-2"></i>Connected successfully! Synced database with Google Sheets.';
               // Sync DB and reload views
               window.db.data = serverDb;
-              window.db.patchAndMigrate();
-              localStorage.setItem('PROJECT_DASHBOARD_DB_V3', JSON.stringify(serverDb));
+              window.db.normalizeData();
+              localStorage.setItem('PROJECT_DASHBOARD_DB_V5', JSON.stringify(serverDb));
               this.updateViews();
             } else {
               throw new Error('Response is not a valid database object');
@@ -1754,7 +1742,7 @@ class DashboardApp {
       let stageBadge = '<span class="badge bg-secondary">Hold</span>';
       if (p.stage === 'Underdevelop') stageBadge = '<span class="badge bg-info text-dark">Underdevelop</span>';
       else if (p.stage === 'Award') stageBadge = '<span class="badge bg-success" style="background-color: var(--primary-color) !important;">Award</span>';
-      else if (p.stage === 'Cancle') stageBadge = '<span class="badge bg-danger">Cancle</span>';
+      else if (p.stage === 'Cancel' || p.stage === 'Cancle') stageBadge = '<span class="badge bg-danger">Cancel</span>';
 
       let systemsHtml = '';
       if (p.systems) {
@@ -1979,7 +1967,7 @@ class DashboardApp {
       let stageBadge = '<span class="badge bg-secondary">Hold</span>';
       if (p.stage === 'Underdevelop') stageBadge = '<span class="badge bg-info text-dark">Underdevelop</span>';
       else if (p.stage === 'Award') stageBadge = '<span class="badge bg-success" style="background-color: var(--primary-color) !important;">Award</span>';
-      else if (p.stage === 'Cancle') stageBadge = '<span class="badge bg-danger">Cancle</span>';
+      else if (p.stage === 'Cancel' || p.stage === 'Cancle') stageBadge = '<span class="badge bg-danger">Cancel</span>';
 
       let systemsHtml = '';
       if (p.systems) {
@@ -2097,8 +2085,8 @@ class DashboardApp {
             stageBadge = `<span class="badge bg-warning text-dark float-end" style="font-size: 9px;">Dev</span>`;
           } else if (p.stage === 'Award') {
             stageBadge = `<span class="badge bg-success text-white float-end" style="font-size: 9px; background-color: var(--primary-color) !important;">Award</span>`;
-          } else if (p.stage === 'Cancle') {
-            stageBadge = `<span class="badge bg-danger text-white float-end" style="font-size: 9px;">Cancle</span>`;
+          } else if (p.stage === 'Cancel' || p.stage === 'Cancle') {
+            stageBadge = `<span class="badge bg-danger text-white float-end" style="font-size: 9px;">Cancel</span>`;
           }
 
           chip.innerHTML = `
@@ -2363,66 +2351,86 @@ class DashboardApp {
     }
 
     const editForm = document.getElementById('edit-project-form');
-    editForm.onsubmit = (e) => {
+    editForm.onsubmit = async (e) => {
       e.preventDefault();
-      
-      const systemsObj = this.readSystemsFromDom('edit-project-systems-container');
 
-      const coordsVal = document.getElementById('edit-project-coords').value.trim();
-      const mapsLink = document.getElementById('edit-project-maps-link').value.trim();
-      const { lat, lng } = this.parseCoordinates(coordsVal, mapsLink);
-
-      // Image resolution
-      let imageVal = proj.image; // default to old image
-      const fileInput = document.getElementById('edit-project-image-file');
-      const fileBase64 = fileInput ? fileInput.getAttribute('data-base64') : null;
-      const urlVal = document.getElementById('edit-project-image-url').value.trim();
-      if (fileBase64) {
-        imageVal = fileBase64;
-      } else if (urlVal) {
-        imageVal = urlVal;
+      const submitBtn = editForm.querySelector('button[type="submit"]');
+      const origBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
       }
 
-      // Deliverables and notes
-      const deliverablesList = this.readDeliverablesFromDom('edit-project-deliverables-list');
-      const notesVal = document.getElementById('edit-project-notes').value;
-      const stageVal = document.getElementById('edit-project-stage').value;
+      try {
+        const systemsObj = this.readSystemsFromDom('edit-project-systems-container');
 
-      const updated = {
-        name: document.getElementById('edit-project-name').value,
-        region: document.getElementById('edit-project-region').value,
-        engineer: document.getElementById('edit-project-engineer').value,
-        businessType: document.getElementById('edit-project-business').value,
-        investor: document.getElementById('edit-project-investor').value,
-        client: document.getElementById('edit-project-client').value,
-        systems: systemsObj,
-        lat: lat,
-        lng: lng,
-        googleMapsLink: mapsLink,
-        image: imageVal,
-        deliverables: deliverablesList,
-        revisions: this.currentEditProjectRevisions,
-        notes: notesVal,
-        status: document.getElementById('edit-project-status').value,
-        stage: stageVal,
-        deadline: document.getElementById('edit-project-deadline').value,
-        // Include award details if stage is Award
-        ...(stageVal === 'Award' ? this.currentEditProjectAwardData : {
-          constructionDate: '',
-          codDate: '',
-          prTest: '',
-          pv: '',
-          inverter: '',
-          awardNote: ''
-        })
-      };
+        const coordsVal = document.getElementById('edit-project-coords').value.trim();
+        const mapsLink = document.getElementById('edit-project-maps-link').value.trim();
+        const { lat, lng } = this.parseCoordinates(coordsVal, mapsLink);
 
-      const success = window.db.updateProject(proj.id, updated);
-      if (success) {
-        const modalEl = document.getElementById('editProjectModal');
-        const modalInstance = bootstrap.Modal.getInstance(modalEl);
-        if (modalInstance) modalInstance.hide();
-        this.updateViews();
+        // Image resolution
+        let imageVal = proj.image; // default to old image
+        const fileInput = document.getElementById('edit-project-image-file');
+        const urlVal = document.getElementById('edit-project-image-url').value.trim();
+
+        if (fileInput && fileInput.files && fileInput.files[0]) {
+          if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-cloud-upload-alt fa-spin me-2"></i>Uploading Image...';
+          try {
+            imageVal = await window.db.uploadImage(fileInput.files[0], proj.image);
+          } catch (uploadErr) {
+            console.error('Image upload failed, continuing with previous image:', uploadErr);
+            alert('คำเตือน: อัปโหลดรูปภาพไม่สำเร็จ (' + uploadErr.message + ') จะใช้รูปภาพเดิม');
+          }
+        } else if (urlVal) {
+          imageVal = urlVal;
+        }
+
+        // Deliverables and notes
+        const deliverablesList = this.readDeliverablesFromDom('edit-project-deliverables-list');
+        const notesVal = document.getElementById('edit-project-notes').value;
+        const stageVal = document.getElementById('edit-project-stage').value;
+
+        const updated = {
+          name: document.getElementById('edit-project-name').value,
+          region: document.getElementById('edit-project-region').value,
+          engineer: document.getElementById('edit-project-engineer').value,
+          businessType: document.getElementById('edit-project-business').value,
+          investor: document.getElementById('edit-project-investor').value,
+          client: document.getElementById('edit-project-client').value,
+          systems: systemsObj,
+          lat: lat,
+          lng: lng,
+          googleMapsLink: mapsLink,
+          image: imageVal,
+          deliverables: deliverablesList,
+          revisions: this.currentEditProjectRevisions,
+          notes: notesVal,
+          status: document.getElementById('edit-project-status').value,
+          stage: stageVal,
+          deadline: document.getElementById('edit-project-deadline').value,
+          // Include award details if stage is Award
+          ...(stageVal === 'Award' ? this.currentEditProjectAwardData : {
+            constructionDate: '',
+            codDate: '',
+            prTest: '',
+            pv: '',
+            inverter: '',
+            awardNote: ''
+          })
+        };
+
+        const success = await window.db.updateProject(proj.id, updated);
+        if (success) {
+          const modalEl = document.getElementById('editProjectModal');
+          const modalInstance = bootstrap.Modal.getInstance(modalEl);
+          if (modalInstance) modalInstance.hide();
+          this.updateViews();
+        }
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = origBtnHtml;
+        }
       }
     };
 
@@ -2474,78 +2482,102 @@ class DashboardApp {
   }
 
   // Handle Project Add Submit
-  handleProjectSubmit(e) {
+  async handleProjectSubmit(e) {
     e.preventDefault();
-    
-    const code = document.getElementById('project-code').value;
-    const name = document.getElementById('project-name').value;
-    const region = document.getElementById('project-region').value;
-    const engineer = document.getElementById('project-engineer').value;
-    const businessType = document.getElementById('project-business').value;
-    const investor = document.getElementById('project-investor').value;
-    const client = document.getElementById('project-client').value;
-    
-    const coordsVal = document.getElementById('project-coords').value.trim();
-    const mapsLink = document.getElementById('project-maps-link').value.trim();
-    const { lat, lng } = this.parseCoordinates(coordsVal, mapsLink);
-    
-    const status = document.getElementById('project-status').value;
-    const stage = document.getElementById('project-stage').value;
-    const deadline = document.getElementById('project-deadline').value;
 
-    const systemsObj = this.readSystemsFromDom('add-project-systems-container');
-
-    // Image resolution
-    let imageVal = '';
-    const fileInput = document.getElementById('project-image-file');
-    const fileBase64 = fileInput ? fileInput.getAttribute('data-base64') : null;
-    const urlVal = document.getElementById('project-image-url').value.trim();
-    if (fileBase64) {
-      imageVal = fileBase64;
-    } else if (urlVal) {
-      imageVal = urlVal;
-    } else {
-      imageVal = 'https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=600&auto=format&fit=crop&q=60';
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const origBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
     }
 
-    // Deliverables and notes
-    const deliverablesList = this.readDeliverablesFromDom('add-project-deliverables-list');
-    const notesVal = document.getElementById('project-notes').value;
-
-    const awardDetails = stage === 'Award' ? this.currentAddProjectAwardData : {
-      constructionDate: '',
-      codDate: '',
-      prTest: '',
-      pv: '',
-      inverter: '',
-      awardNote: ''
-    };
-
-    const newProj = window.db.addProject({
-      code, name, region, engineer, businessType, investor, client, 
-      systems: systemsObj, lat, lng, googleMapsLink: mapsLink, 
-      image: imageVal, deliverables: deliverablesList, notes: notesVal,
-      status, stage, deadline,
-      ...awardDetails
-    });
-
-    if (newProj) {
-      alert(`Project ${newProj.code} added to database successfully!`);
-      document.getElementById('add-project-form').reset();
+    try {
+      const code = document.getElementById('project-code').value;
+      const name = document.getElementById('project-name').value;
+      const region = document.getElementById('project-region').value;
+      const engineer = document.getElementById('project-engineer').value;
+      const businessType = document.getElementById('project-business').value;
+      const investor = document.getElementById('project-investor').value;
+      const client = document.getElementById('project-client').value;
       
-      ['Rooftop', 'Farm', 'Floating', 'Carpark', 'BESS'].forEach(sys => {
-        const wrapper = document.getElementById(`project-capacity-${sys}-wrapper`);
-        if (wrapper) wrapper.style.display = 'none';
-      });
+      const coordsVal = document.getElementById('project-coords').value.trim();
+      const mapsLink = document.getElementById('project-maps-link').value.trim();
+      const { lat, lng } = this.parseCoordinates(coordsVal, mapsLink);
+      
+      const status = document.getElementById('project-status').value;
+      const stage = document.getElementById('project-stage').value;
+      const deadline = document.getElementById('project-deadline').value;
 
-      // Remove custom systems from the form container
-      const addContainer = document.getElementById('add-project-systems-container');
-      if (addContainer) {
-        addContainer.querySelectorAll('.custom-system-item').forEach(item => item.remove());
+      const systemsObj = this.readSystemsFromDom('add-project-systems-container');
+
+      // Image resolution
+      let imageVal = '';
+      const fileInput = document.getElementById('project-image-file');
+      const urlVal = document.getElementById('project-image-url').value.trim();
+
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-cloud-upload-alt fa-spin me-2"></i>Uploading Image...';
+        try {
+          imageVal = await window.db.uploadImage(fileInput.files[0]);
+        } catch (uploadErr) {
+          console.error('Image upload failed:', uploadErr);
+          alert('คำเตือน: อัปโหลดรูปภาพไม่สำเร็จ (' + uploadErr.message + ') จะใช้รูปภาพเริ่มต้น');
+          imageVal = 'https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=600&auto=format&fit=crop&q=60';
+        }
+      } else if (urlVal) {
+        imageVal = urlVal;
+      } else {
+        imageVal = 'https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=600&auto=format&fit=crop&q=60';
       }
 
-      this.updateViews();
-      this.switchPage('pipeline');
+      // Deliverables and notes
+      const deliverablesList = this.readDeliverablesFromDom('add-project-deliverables-list');
+      const notesVal = document.getElementById('project-notes').value;
+
+      const awardDetails = stage === 'Award' ? this.currentAddProjectAwardData : {
+        constructionDate: '',
+        codDate: '',
+        prTest: '',
+        pv: '',
+        inverter: '',
+        awardNote: ''
+      };
+
+      const newProj = await window.db.addProject({
+        code, name, region, engineer, businessType, investor, client, 
+        systems: systemsObj, lat, lng, googleMapsLink: mapsLink, 
+        image: imageVal, deliverables: deliverablesList, notes: notesVal,
+        status, stage, deadline,
+        ...awardDetails
+      });
+
+      if (newProj) {
+        alert(`Project ${newProj.code} added to database successfully!`);
+        document.getElementById('add-project-form').reset();
+        
+        ['Rooftop', 'Farm', 'Floating', 'Carpark', 'BESS'].forEach(sys => {
+          const wrapper = document.getElementById(`project-capacity-${sys}-wrapper`);
+          if (wrapper) wrapper.style.display = 'none';
+        });
+
+        // Remove custom systems from the form container
+        const addContainer = document.getElementById('add-project-systems-container');
+        if (addContainer) {
+          addContainer.querySelectorAll('.custom-system-item').forEach(item => item.remove());
+        }
+
+        const previewWrapper = document.getElementById('project-image-preview-wrapper');
+        if (previewWrapper) previewWrapper.style.display = 'none';
+
+        this.updateViews();
+        this.switchPage('pipeline');
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origBtnHtml;
+      }
     }
   }
 
@@ -3528,8 +3560,6 @@ class DashboardApp {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
-
-
 
 }
 

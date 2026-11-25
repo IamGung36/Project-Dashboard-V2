@@ -165,7 +165,7 @@ class KanbanBoard {
             <select class="kanban-stage-select border-0" style="font-size: 11px; padding: 2px 8px; border-radius: 6px; cursor: pointer;">
               <option value="Underdevelop" ${proj.stage === 'Underdevelop' ? 'selected' : ''}>Underdevelop</option>
               <option value="Award" ${proj.stage === 'Award' ? 'selected' : ''}>Award</option>
-              <option value="Cancle" ${proj.stage === 'Cancle' ? 'selected' : ''}>Cancle</option>
+              <option value="Cancel" ${(proj.stage === 'Cancel' || proj.stage === 'Cancle') ? 'selected' : ''}>Cancel</option>
               <option value="Hold" ${proj.stage === 'Hold' ? 'selected' : ''}>Hold</option>
             </select>
           </div>

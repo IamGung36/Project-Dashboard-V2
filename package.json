@@ -1,0 +1,12 @@
+{
+  "name": "project-dashboard-v2",
+  "version": "2.1.0",
+  "description": "Renewable Energy Project Dashboard with Multi-user Google Apps Script & GitHub Pages support",
+  "type": "module",
+  "scripts": {
+    "build:gas": "node scripts/build-gas.mjs",
+    "deploy:gas": "node scripts/build-gas.mjs && clasp push"
+  },
+  "author": "IamGung",
+  "license": "MIT"
+}

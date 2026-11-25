@@ -1,2 +1,7 @@
+node_modules/
 backup_*
 Backup V.*
+gas_deploy/test_compiled.html
+test_compiled.html
+.DS_Store
+Thumbs.db
