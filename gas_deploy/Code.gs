@@ -74,7 +74,7 @@ function doPost(e) {
  * Helper to include HTML sub-templates
  */
 function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+  return HtmlService.createTemplateFromFile(filename).getRawContent();
 }
 
 /**
